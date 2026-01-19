@@ -11,7 +11,7 @@
     "db:stop": "docker-compose down",
     "db:reset": "cd backend && npx prisma migrate reset",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "build:all": "cd backend && npm run build && cd ../frontend && npm run build"
+    "build:all": "cd backend && npm run build && cd ../frontend && NODE_OPTIONS='--max-old-space-size=4096' npm run build"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

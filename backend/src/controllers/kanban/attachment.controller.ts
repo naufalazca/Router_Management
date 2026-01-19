@@ -24,16 +24,17 @@ export class AttachmentController {
   /**
    * Upload attachment
    */
-  uploadAttachment = async (req: Request, res: Response, next: NextFunction) => {
+  uploadAttachment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { taskId } = req.params;
       const userId = req.user!.userId;
 
       if (!req.file) {
-        return res.status(400).json({
+        res.status(400).json({
           status: 'error',
           message: 'No file uploaded',
         });
+        return;
       }
 
       const attachment = await attachmentService.uploadAttachment(taskId, userId, {
@@ -152,7 +153,7 @@ export class AttachmentController {
   /**
    * Cleanup orphaned files (admin only)
    */
-  cleanupOrphanedFiles = async (req: Request, res: Response, next: NextFunction) => {
+  cleanupOrphanedFiles = async (_req: Request, res: Response, next: NextFunction) => {
     try {
       // TODO: Add admin role check
       const result = await attachmentService.cleanupOrphanedFiles();

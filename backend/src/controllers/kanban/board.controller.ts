@@ -186,7 +186,7 @@ export class BoardController {
       const userId = req.user!.userId;
       const { name, color } = req.body;
 
-      const list = await boardListService.createBoardList(boardId, userId, { name, color });
+      const list = await boardListService.createBoardList(boardId, userId, { name, color, position: 0 });
 
       res.status(201).json({
         status: 'success',

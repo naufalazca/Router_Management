@@ -64,6 +64,7 @@ export class TaskController {
         dueDate: dueDate ? new Date(dueDate) : undefined,
         startDate: startDate ? new Date(startDate) : undefined,
         estimatedHours,
+        position: 0,
         router: routerId ? { connect: { id: routerId } } : undefined,
       });
 

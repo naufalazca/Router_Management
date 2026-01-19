@@ -5,11 +5,13 @@
 
 import { Router } from 'express';
 import * as userController from '../../controllers/routeros/routeros.user.controller';
+import { authenticate, requireAdmin } from '../../middleware/auth';
 
 const router = Router();
 
-// TODO: Add authentication middleware when available
-// All routes should require authentication in production
+// Apply authentication and admin authorization to all RouterOS user routes
+router.use(authenticate);
+router.use(requireAdmin);
 
 /**
  * @route   GET /api/routeros/users/:routerId

@@ -1,8 +1,13 @@
 import { Router } from 'express';
 import { RouterController } from '../controllers/router.controller';
+import { authenticate, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 const routerController = new RouterController();
+
+// Apply authentication and admin authorization to all router routes
+router.use(authenticate);
+router.use(requireAdmin);
 
 // GET /api/routers - Get all routers
 router.get('/', routerController.getAll);

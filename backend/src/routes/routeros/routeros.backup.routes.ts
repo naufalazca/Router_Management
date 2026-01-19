@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { routerOSBackupController } from '../../controllers/routeros/routeros.backup.controller';
+import { authenticate, requireAdmin } from '../../middleware/auth';
 
 const router = Router();
 
@@ -7,6 +8,10 @@ const router = Router();
  * RouterOS Backup Routes
  * Base path: /api/routeros/backup
  */
+
+// Apply authentication and admin authorization to all RouterOS backup routes
+router.use(authenticate);
+router.use(requireAdmin);
 
 // Trigger manual backup for a specific router
 router.post('/:routerId/trigger', (req, res, next) =>

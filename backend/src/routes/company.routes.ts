@@ -1,8 +1,13 @@
 import { Router } from 'express';
 import { CompanyController } from '../controllers/company.controller';
+import { authenticate, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 const companyController = new CompanyController();
+
+// Apply authentication and admin authorization to all company routes
+router.use(authenticate);
+router.use(requireAdmin);
 
 // GET /api/companies - Get all companies
 router.get('/', companyController.getAll);

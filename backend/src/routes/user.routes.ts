@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { userController } from '../controllers/user.controller';
+import { authenticate, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
@@ -8,9 +9,13 @@ const router = Router();
  * Base path: /api/users
  */
 
-// Authentication routes
+// Authentication routes (no auth required)
 router.post('/login', userController.login.bind(userController));
 router.post('/verify-token', userController.verifyToken.bind(userController));
+
+// Apply authentication and admin authorization to all user management routes
+router.use(authenticate);
+router.use(requireAdmin);
 
 // User management routes
 router.post('/', userController.createUser.bind(userController));

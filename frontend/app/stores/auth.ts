@@ -12,6 +12,7 @@ interface AuthState {
   user: User | null
   token: string | null
   isAuthenticated: boolean
+  isInitialized: boolean
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -19,6 +20,7 @@ export const useAuthStore = defineStore('auth', {
     user: null,
     token: null,
     isAuthenticated: false,
+    isInitialized: false,
   }),
 
   actions: {
@@ -47,6 +49,10 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async initAuth() {
+      if (this.isInitialized) {
+        return
+      }
+
       if (import.meta.client) {
         const token = localStorage.getItem('token')
         const userStr = localStorage.getItem('user')
@@ -61,6 +67,7 @@ export const useAuthStore = defineStore('auth', {
             this.clearAuth()
           }
         }
+        this.isInitialized = true
       }
     },
 

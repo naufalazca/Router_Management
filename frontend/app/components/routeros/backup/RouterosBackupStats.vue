@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { Archive, CheckCircle2, HardDrive, Pin, XCircle } from 'lucide-vue-next'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
-import { Archive, CheckCircle2, XCircle, Pin, HardDrive } from 'lucide-vue-next'
 
 defineProps<{
   total: number
@@ -16,11 +16,15 @@ defineProps<{
     <!-- Total Backups -->
     <Card>
       <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle class="text-sm font-medium">Total Backups</CardTitle>
+        <CardTitle class="text-sm font-medium">
+          Total Backups
+        </CardTitle>
         <Archive class="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div class="text-2xl font-bold">{{ total }}</div>
+        <div class="text-2xl font-bold">
+          {{ total }}
+        </div>
         <p class="text-xs text-muted-foreground mt-1">
           All backup records
         </p>
@@ -30,11 +34,15 @@ defineProps<{
     <!-- Completed -->
     <Card>
       <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle class="text-sm font-medium">Completed</CardTitle>
+        <CardTitle class="text-sm font-medium">
+          Completed
+        </CardTitle>
         <CheckCircle2 class="h-4 w-4 text-green-600" />
       </CardHeader>
       <CardContent>
-        <div class="text-2xl font-bold text-green-600">{{ completed }}</div>
+        <div class="text-2xl font-bold text-green-600">
+          {{ completed }}
+        </div>
         <p class="text-xs text-muted-foreground mt-1">
           Successfully backed up
         </p>
@@ -44,11 +52,15 @@ defineProps<{
     <!-- Failed -->
     <Card>
       <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle class="text-sm font-medium">Failed</CardTitle>
+        <CardTitle class="text-sm font-medium">
+          Failed
+        </CardTitle>
         <XCircle class="h-4 w-4 text-red-600" />
       </CardHeader>
       <CardContent>
-        <div class="text-2xl font-bold text-red-600">{{ failed }}</div>
+        <div class="text-2xl font-bold text-red-600">
+          {{ failed }}
+        </div>
         <p class="text-xs text-muted-foreground mt-1">
           Backup errors
         </p>
@@ -58,11 +70,15 @@ defineProps<{
     <!-- Pinned -->
     <Card>
       <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle class="text-sm font-medium">Pinned</CardTitle>
+        <CardTitle class="text-sm font-medium">
+          Pinned
+        </CardTitle>
         <Pin class="h-4 w-4 text-primary" />
       </CardHeader>
       <CardContent>
-        <div class="text-2xl font-bold text-primary">{{ pinned }}</div>
+        <div class="text-2xl font-bold text-primary">
+          {{ pinned }}
+        </div>
         <p class="text-xs text-muted-foreground mt-1">
           Protected backups
         </p>
@@ -72,11 +88,15 @@ defineProps<{
     <!-- Total Size -->
     <Card>
       <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle class="text-sm font-medium">Total Size</CardTitle>
+        <CardTitle class="text-sm font-medium">
+          Total Size
+        </CardTitle>
         <HardDrive class="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div class="text-2xl font-bold">{{ totalSizeMb.toFixed(2) }} MB</div>
+        <div class="text-2xl font-bold">
+          {{ totalSizeMb.toFixed(2) }} MB
+        </div>
         <p class="text-xs text-muted-foreground mt-1">
           Storage used
         </p>

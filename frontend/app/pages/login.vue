@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { toast } from 'vue-sonner'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { toast } from 'vue-sonner'
 import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({
@@ -31,12 +31,15 @@ async function handleLogin() {
     if (result.success) {
       toast.success('Login successful!')
       router.push('/')
-    } else {
+    }
+    else {
       toast.error(result.error || 'Login failed')
     }
-  } catch (error) {
+  }
+  catch (error) {
     toast.error('An unexpected error occurred')
-  } finally {
+  }
+  finally {
     isLoading.value = false
   }
 }
@@ -60,7 +63,7 @@ function handleKeyPress(event: KeyboardEvent) {
         </p>
       </CardHeader>
       <CardContent>
-        <form @submit.prevent="handleLogin" class="space-y-4">
+        <form class="space-y-4" @submit.prevent="handleLogin">
           <div class="space-y-2">
             <label for="username" class="text-sm font-medium">
               Username
@@ -71,8 +74,8 @@ function handleKeyPress(event: KeyboardEvent) {
               type="text"
               placeholder="Enter your username"
               :disabled="isLoading"
-              @keypress="handleKeyPress"
               autocomplete="username"
+              @keypress="handleKeyPress"
             />
           </div>
 
@@ -86,8 +89,8 @@ function handleKeyPress(event: KeyboardEvent) {
               type="password"
               placeholder="Enter your password"
               :disabled="isLoading"
-              @keypress="handleKeyPress"
               autocomplete="current-password"
+              @keypress="handleKeyPress"
             />
           </div>
 

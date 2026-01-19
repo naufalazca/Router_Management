@@ -1,22 +1,23 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useCompanyStore, type Company } from '~/stores/company'
+import type { Company } from '~/stores/company'
 import {
-  Plus,
-  Search,
   Building2,
-  Users,
-  Server,
-  MapPin,
   Code,
   Eye,
+  MapPin,
   Pencil,
-  Trash2
+  Plus,
+  Search,
+  Server,
+  Trash2,
+  Users,
 } from 'lucide-vue-next'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { computed, onMounted, ref } from 'vue'
+import { toast } from 'vue-sonner'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -25,11 +26,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { toast } from 'vue-sonner'
 import CompanyCreateModal from '~/components/company/CompanyCreateModal.vue'
+import CompanyDeleteDialog from '~/components/company/CompanyDeleteDialog.vue'
 import CompanyEditModal from '~/components/company/CompanyEditModal.vue'
 import CompanyViewModal from '~/components/company/CompanyViewModal.vue'
-import CompanyDeleteDialog from '~/components/company/CompanyDeleteDialog.vue'
+import { useCompanyStore } from '~/stores/company'
 
 const companyStore = useCompanyStore()
 const searchQuery = ref('')
@@ -48,13 +49,14 @@ onMounted(async () => {
 
 // Filtered companies based on search
 const filteredCompanies = computed(() => {
-  if (!searchQuery.value) return companyStore.companies
+  if (!searchQuery.value)
+    return companyStore.companies
 
   const query = searchQuery.value.toLowerCase()
   return companyStore.companies.filter(company =>
-    company.name.toLowerCase().includes(query) ||
-    company.code.toLowerCase().includes(query) ||
-    company.address.toLowerCase().includes(query)
+    company.name.toLowerCase().includes(query)
+    || company.code.toLowerCase().includes(query)
+    || company.address.toLowerCase().includes(query),
   )
 })
 
@@ -64,7 +66,7 @@ function formatDate(dateString: string) {
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
-    year: 'numeric'
+    year: 'numeric',
   }).format(date)
 }
 
@@ -117,7 +119,7 @@ const stats = computed(() => ({
   total: companyStore.companyCount,
   withRouters: companyStore.companiesWithRouters.length,
   withoutRouters: companyStore.companiesWithoutRouters.length,
-  totalRouters: companyStore.totalRoutersAcrossCompanies
+  totalRouters: companyStore.totalRoutersAcrossCompanies,
 }))
 </script>
 
@@ -148,7 +150,7 @@ const stats = computed(() => ({
             class="pl-9"
           />
         </div>
-        <Button @click="openCreateModal" class="gap-2">
+        <Button class="gap-2" @click="openCreateModal">
           <Plus class="h-4 w-4" />
           <span class="hidden sm:inline">Add Company</span>
         </Button>
@@ -161,8 +163,12 @@ const stats = computed(() => ({
         <CardContent class="pt-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs text-muted-foreground uppercase tracking-wider">Total Companies</p>
-              <p class="text-3xl font-bold tabular-nums mt-1">{{ stats.total }}</p>
+              <p class="text-xs text-muted-foreground uppercase tracking-wider">
+                Total Companies
+              </p>
+              <p class="text-3xl font-bold tabular-nums mt-1">
+                {{ stats.total }}
+              </p>
             </div>
             <Building2 class="h-8 w-8 text-muted-foreground/50" />
           </div>
@@ -173,8 +179,12 @@ const stats = computed(() => ({
         <CardContent class="pt-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">With Routers</p>
-              <p class="text-3xl font-bold tabular-nums mt-1 text-emerald-600 dark:text-emerald-400">{{ stats.withRouters }}</p>
+              <p class="text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                With Routers
+              </p>
+              <p class="text-3xl font-bold tabular-nums mt-1 text-emerald-600 dark:text-emerald-400">
+                {{ stats.withRouters }}
+              </p>
             </div>
             <Server class="h-8 w-8 text-emerald-600/50 dark:text-emerald-400/50" />
           </div>
@@ -185,8 +195,12 @@ const stats = computed(() => ({
         <CardContent class="pt-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs text-muted-foreground uppercase tracking-wider">No Routers</p>
-              <p class="text-3xl font-bold tabular-nums mt-1 text-muted-foreground">{{ stats.withoutRouters }}</p>
+              <p class="text-xs text-muted-foreground uppercase tracking-wider">
+                No Routers
+              </p>
+              <p class="text-3xl font-bold tabular-nums mt-1 text-muted-foreground">
+                {{ stats.withoutRouters }}
+              </p>
             </div>
             <Users class="h-8 w-8 text-muted-foreground/50" />
           </div>
@@ -197,8 +211,12 @@ const stats = computed(() => ({
         <CardContent class="pt-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">Total Routers</p>
-              <p class="text-3xl font-bold tabular-nums mt-1 text-cyan-600 dark:text-cyan-400">{{ stats.totalRouters }}</p>
+              <p class="text-xs text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">
+                Total Routers
+              </p>
+              <p class="text-3xl font-bold tabular-nums mt-1 text-cyan-600 dark:text-cyan-400">
+                {{ stats.totalRouters }}
+              </p>
             </div>
             <Server class="h-8 w-8 text-cyan-600/50 dark:text-cyan-400/50" />
           </div>
@@ -216,7 +234,7 @@ const stats = computed(() => ({
       </CardHeader>
       <CardContent>
         <div v-if="companyStore.isLoading" class="flex items-center justify-center py-12">
-          <div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+          <div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
         </div>
 
         <div v-else-if="filteredCompanies.length === 0" class="flex flex-col items-center justify-center gap-4 py-12">
@@ -233,9 +251,13 @@ const stats = computed(() => ({
               <TableHead>Code</TableHead>
               <TableHead>Address</TableHead>
               <TableHead>Master User</TableHead>
-              <TableHead class="text-center">Routers</TableHead>
+              <TableHead class="text-center">
+                Routers
+              </TableHead>
               <TableHead>Created</TableHead>
-              <TableHead class="text-right">Actions</TableHead>
+              <TableHead class="text-right">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -249,7 +271,9 @@ const stats = computed(() => ({
                     <Building2 class="h-3 w-3 text-primary" />
                   </div>
                   <div>
-                    <p class="font-semibold">{{ company.name }}</p>
+                    <p class="font-semibold">
+                      {{ company.name }}
+                    </p>
                     <p v-if="company.description" class="text-xs text-muted-foreground truncate max-w-[200px]">
                       {{ company.description }}
                     </p>
@@ -272,7 +296,9 @@ const stats = computed(() => ({
               </TableCell>
 
               <TableCell>
-                <p class="text-sm text-cyan-600 dark:text-cyan-400">{{ company.masterUsername }}</p>
+                <p class="text-sm text-cyan-600 dark:text-cyan-400">
+                  {{ company.masterUsername }}
+                </p>
               </TableCell>
 
               <TableCell class="text-center">
@@ -294,25 +320,25 @@ const stats = computed(() => ({
                   <Button
                     variant="ghost"
                     size="icon"
-                    @click="openViewModal(company)"
                     title="View Details"
+                    @click="openViewModal(company)"
                   >
                     <Eye class="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    @click="openEditModal(company)"
                     title="Edit"
+                    @click="openEditModal(company)"
                   >
                     <Pencil class="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    @click="openDeleteDialog(company)"
                     title="Delete"
                     class="text-destructive hover:text-destructive"
+                    @click="openDeleteDialog(company)"
                   >
                     <Trash2 class="h-4 w-4" />
                   </Button>
@@ -351,4 +377,3 @@ const stats = computed(() => ({
     />
   </div>
 </template>
-

@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouterStore, type Router } from '~/stores/router'
+import type { Router } from '~/stores/router'
+import { computed, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
+import RouterCreateModal from '~/components/router/RouterCreateModal.vue'
+import RouterDeleteDialog from '~/components/router/RouterDeleteDialog.vue'
+import RouterEditModal from '~/components/router/RouterEditModal.vue'
 import RouterHeader from '~/components/router/RouterHeader.vue'
 import RouterStats from '~/components/router/RouterStats.vue'
 import RouterTable from '~/components/router/RouterTable.vue'
-import RouterCreateModal from '~/components/router/RouterCreateModal.vue'
-import RouterEditModal from '~/components/router/RouterEditModal.vue'
 import RouterViewModal from '~/components/router/RouterViewModal.vue'
-import RouterDeleteDialog from '~/components/router/RouterDeleteDialog.vue'
+import { useRouterStore } from '~/stores/router'
 
 const routerStore = useRouterStore()
 const searchQuery = ref('')
@@ -27,14 +28,15 @@ onMounted(async () => {
 
 // Filtered routers based on search
 const filteredRouters = computed(() => {
-  if (!searchQuery.value) return routerStore.routers
+  if (!searchQuery.value)
+    return routerStore.routers
 
   const query = searchQuery.value.toLowerCase()
   return routerStore.routers.filter(router =>
-    router.name.toLowerCase().includes(query) ||
-    router.ipAddress.toLowerCase().includes(query) ||
-    router.location?.toLowerCase().includes(query) ||
-    router.model?.toLowerCase().includes(query)
+    router.name.toLowerCase().includes(query)
+    || router.ipAddress.toLowerCase().includes(query)
+    || router.location?.toLowerCase().includes(query)
+    || router.model?.toLowerCase().includes(query),
   )
 })
 
@@ -87,7 +89,7 @@ const stats = computed(() => ({
   total: routerStore.routerCount,
   active: routerStore.activeRouters.length,
   inactive: routerStore.inactiveRouters.length,
-  maintenance: routerStore.maintenanceRouters.length
+  maintenance: routerStore.maintenanceRouters.length,
 }))
 </script>
 

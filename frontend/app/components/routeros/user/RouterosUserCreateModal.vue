@@ -1,19 +1,20 @@
 <script setup lang="ts">
+import type { CreateRouterOSUserInput } from '~/stores/routeros/user'
 import { ref, watch } from 'vue'
-import { useRouterOSUserStore, type CreateRouterOSUserInput } from '~/stores/routeros/user'
+import { toast } from 'vue-sonner'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { toast } from 'vue-sonner'
+import { Textarea } from '@/components/ui/textarea'
+import { useRouterOSUserStore } from '~/stores/routeros/user'
 
 const props = defineProps<{
   open: boolean
@@ -34,7 +35,7 @@ const formData = ref<CreateRouterOSUserInput>({
   group: 'full',
   address: '',
   comment: '',
-  disabled: false
+  disabled: false,
 })
 
 // Reset form when dialog closes
@@ -51,7 +52,7 @@ function resetForm() {
     group: 'full',
     address: '',
     comment: '',
-    disabled: false
+    disabled: false,
   }
 }
 
@@ -71,12 +72,15 @@ async function handleSubmit() {
       toast.success(result.message || 'User created successfully')
       emit('success')
       emit('update:open', false)
-    } else {
+    }
+    else {
       toast.error(result.error || 'Failed to create user')
     }
-  } catch (error) {
+  }
+  catch (error) {
     toast.error('An unexpected error occurred')
-  } finally {
+  }
+  finally {
     isSubmitting.value = false
   }
 }
@@ -86,13 +90,15 @@ async function handleSubmit() {
   <Dialog :open="props.open" @update:open="(val) => emit('update:open', val)">
     <DialogContent class="sm:max-w-[600px]">
       <DialogHeader>
-        <DialogTitle class="font-mono">Create RouterOS User</DialogTitle>
+        <DialogTitle class="font-mono">
+          Create RouterOS User
+        </DialogTitle>
         <DialogDescription class="font-mono text-xs">
           Add a new user account to the MikroTik router
         </DialogDescription>
       </DialogHeader>
 
-      <form @submit.prevent="handleSubmit" class="space-y-4 mt-4">
+      <form class="space-y-4 mt-4" @submit.prevent="handleSubmit">
         <div class="grid grid-cols-2 gap-4">
           <!-- Username -->
           <div class="col-span-2 space-y-2">
@@ -115,7 +121,9 @@ async function handleSubmit() {
               required
               class="font-mono"
             />
-            <p class="text-xs text-muted-foreground font-mono">Strong password recommended</p>
+            <p class="text-xs text-muted-foreground font-mono">
+              Strong password recommended
+            </p>
           </div>
 
           <!-- Group -->
@@ -125,11 +133,19 @@ async function handleSubmit() {
               v-model="formData.group"
               class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono"
             >
-              <option value="full">full (Administrator)</option>
-              <option value="read">read (Read-only)</option>
-              <option value="write">write (Read-write)</option>
+              <option value="full">
+                full (Administrator)
+              </option>
+              <option value="read">
+                read (Read-only)
+              </option>
+              <option value="write">
+                write (Read-write)
+              </option>
             </select>
-            <p class="text-xs text-muted-foreground font-mono">User permission group</p>
+            <p class="text-xs text-muted-foreground font-mono">
+              User permission group
+            </p>
           </div>
 
           <!-- IP Address -->
@@ -140,7 +156,9 @@ async function handleSubmit() {
               placeholder="0.0.0.0/0"
               class="font-mono"
             />
-            <p class="text-xs text-muted-foreground font-mono">Leave empty for any IP</p>
+            <p class="text-xs text-muted-foreground font-mono">
+              Leave empty for any IP
+            </p>
           </div>
 
           <!-- Comment -->
@@ -175,8 +193,8 @@ async function handleSubmit() {
           <Button
             type="button"
             variant="outline"
-            @click="emit('update:open', false)"
             :disabled="isSubmitting"
+            @click="emit('update:open', false)"
           >
             Cancel
           </Button>

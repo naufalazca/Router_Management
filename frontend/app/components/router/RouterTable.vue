@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { type Router } from '~/stores/router'
+import type { Router } from '~/stores/router'
 import {
-  Eye,
-  Pencil,
-  Trash2,
-  Server,
-  Wifi,
-  MapPin,
-  Clock,
   CheckCircle2,
+  Clock,
+  Eye,
+  MapPin,
+  Pencil,
+  Server,
+  Trash2,
+  Wifi,
+  Wrench,
   XCircle,
-  Wrench
 } from 'lucide-vue-next'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -31,9 +31,9 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'view': [router: Router]
-  'edit': [router: Router]
-  'delete': [router: Router]
+  view: [router: Router]
+  edit: [router: Router]
+  delete: [router: Router]
 }>()
 
 // Status badge config
@@ -42,31 +42,32 @@ const statusConfig = {
     icon: CheckCircle2,
     variant: 'default' as const,
     color: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/10 border-emerald-500/20'
+    bgColor: 'bg-emerald-500/10 border-emerald-500/20',
   },
   INACTIVE: {
     icon: XCircle,
     variant: 'secondary' as const,
     color: 'text-slate-400',
-    bgColor: 'bg-slate-500/10 border-slate-500/20'
+    bgColor: 'bg-slate-500/10 border-slate-500/20',
   },
   MAINTENANCE: {
     icon: Wrench,
     variant: 'outline' as const,
     color: 'text-amber-400',
-    bgColor: 'bg-amber-500/10 border-amber-500/20'
-  }
+    bgColor: 'bg-amber-500/10 border-amber-500/20',
+  },
 }
 
 // Format date
 function formatDate(dateString: string | null | undefined) {
-  if (!dateString) return 'Never'
+  if (!dateString)
+    return 'Never'
   const date = new Date(dateString)
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   }).format(date)
 }
 </script>
@@ -81,7 +82,7 @@ function formatDate(dateString: string | null | undefined) {
     </CardHeader>
     <CardContent>
       <div v-if="isLoading" class="flex items-center justify-center py-12">
-        <div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+        <div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
       </div>
 
       <div v-else-if="routers.length === 0" class="flex flex-col items-center justify-center gap-4 py-12">
@@ -100,7 +101,9 @@ function formatDate(dateString: string | null | undefined) {
             <TableHead>Location</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Last Seen</TableHead>
-            <TableHead class="text-right">Actions</TableHead>
+            <TableHead class="text-right">
+              Actions
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -119,7 +122,9 @@ function formatDate(dateString: string | null | undefined) {
 
             <TableCell>
               <div class="space-y-0.5">
-                <p class="text-sm text-cyan-600 dark:text-cyan-400">{{ router.ipAddress }}</p>
+                <p class="text-sm text-cyan-600 dark:text-cyan-400">
+                  {{ router.ipAddress }}
+                </p>
                 <p v-if="router.macAddress" class="text-xs text-muted-foreground">
                   {{ router.macAddress }}
                 </p>
@@ -168,25 +173,25 @@ function formatDate(dateString: string | null | undefined) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  @click="emit('view', router)"
                   title="View Details"
+                  @click="emit('view', router)"
                 >
                   <Eye class="h-4 w-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  @click="emit('edit', router)"
                   title="Edit"
+                  @click="emit('edit', router)"
                 >
                   <Pencil class="h-4 w-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  @click="emit('delete', router)"
                   title="Delete"
                   class="text-destructive hover:text-destructive"
+                  @click="emit('delete', router)"
                 >
                   <Trash2 class="h-4 w-4" />
                 </Button>

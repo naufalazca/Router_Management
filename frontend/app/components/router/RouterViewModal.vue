@@ -1,29 +1,29 @@
 <script setup lang="ts">
-import { type Router } from '~/stores/router'
+import type { Router } from '~/stores/router'
+import {
+  CheckCircle2,
+  Clock,
+  HardDrive,
+  Lock,
+  MapPin,
+  Network,
+  Radio,
+  Server,
+  User,
+  Wifi,
+  Wrench,
+  XCircle,
+} from 'lucide-vue-next'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import {
-  Server,
-  Wifi,
-  MapPin,
-  CheckCircle2,
-  XCircle,
-  Wrench,
-  Clock,
-  Network,
-  HardDrive,
-  User,
-  Lock,
-  Radio
-} from 'lucide-vue-next'
 
 const props = defineProps<{
   open: boolean
@@ -39,29 +39,30 @@ const statusConfig = {
   ACTIVE: {
     icon: CheckCircle2,
     color: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/10 border-emerald-500/20'
+    bgColor: 'bg-emerald-500/10 border-emerald-500/20',
   },
   INACTIVE: {
     icon: XCircle,
     color: 'text-slate-400',
-    bgColor: 'bg-slate-500/10 border-slate-500/20'
+    bgColor: 'bg-slate-500/10 border-slate-500/20',
   },
   MAINTENANCE: {
     icon: Wrench,
     color: 'text-amber-400',
-    bgColor: 'bg-amber-500/10 border-amber-500/20'
-  }
+    bgColor: 'bg-amber-500/10 border-amber-500/20',
+  },
 }
 
 function formatDate(dateString: string | null | undefined) {
-  if (!dateString) return 'Never'
+  if (!dateString)
+    return 'Never'
   const date = new Date(dateString)
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   }).format(date)
 }
 </script>
@@ -70,7 +71,9 @@ function formatDate(dateString: string | null | undefined) {
   <Dialog :open="props.open" @update:open="(val) => emit('update:open', val)">
     <DialogContent class="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle class="font-mono">Device Details</DialogTitle>
+        <DialogTitle class="font-mono">
+          Device Details
+        </DialogTitle>
         <DialogDescription class="font-mono text-xs">
           View network device information
         </DialogDescription>
@@ -93,7 +96,9 @@ function formatDate(dateString: string | null | undefined) {
                   <Wifi class="h-3 w-3" />
                   Device Name
                 </div>
-                <p class="font-mono text-sm font-medium">{{ props.router.name }}</p>
+                <p class="font-mono text-sm font-medium">
+                  {{ props.router.name }}
+                </p>
               </div>
 
               <!-- Status -->
@@ -121,7 +126,9 @@ function formatDate(dateString: string | null | undefined) {
                   <HardDrive class="h-3 w-3" />
                   Model
                 </div>
-                <p class="font-mono text-sm">{{ props.router.model }}</p>
+                <p class="font-mono text-sm">
+                  {{ props.router.model }}
+                </p>
               </div>
 
               <!-- Location -->
@@ -130,7 +137,9 @@ function formatDate(dateString: string | null | undefined) {
                   <MapPin class="h-3 w-3" />
                   Location
                 </div>
-                <p class="font-mono text-sm">{{ props.router.location }}</p>
+                <p class="font-mono text-sm">
+                  {{ props.router.location }}
+                </p>
               </div>
 
               <!-- Company ID -->
@@ -139,7 +148,9 @@ function formatDate(dateString: string | null | undefined) {
                   <Server class="h-3 w-3" />
                   Company ID
                 </div>
-                <p class="font-mono text-sm text-blue-400">{{ props.router.companyId }}</p>
+                <p class="font-mono text-sm text-blue-400">
+                  {{ props.router.companyId }}
+                </p>
               </div>
 
               <!-- Company Name -->
@@ -148,7 +159,9 @@ function formatDate(dateString: string | null | undefined) {
                   <Server class="h-3 w-3" />
                   Company
                 </div>
-                <p class="font-mono text-sm">{{ props.router.company.name }} ({{ props.router.company.code }})</p>
+                <p class="font-mono text-sm">
+                  {{ props.router.company.name }} ({{ props.router.company.code }})
+                </p>
               </div>
             </div>
           </CardContent>
@@ -170,7 +183,9 @@ function formatDate(dateString: string | null | undefined) {
                   <Network class="h-3 w-3" />
                   IP Address
                 </div>
-                <p class="font-mono text-sm font-medium text-cyan-400">{{ props.router.ipAddress }}</p>
+                <p class="font-mono text-sm font-medium text-cyan-400">
+                  {{ props.router.ipAddress }}
+                </p>
               </div>
 
               <!-- MAC Address -->
@@ -179,7 +194,9 @@ function formatDate(dateString: string | null | undefined) {
                   <Network class="h-3 w-3" />
                   MAC Address
                 </div>
-                <p class="font-mono text-sm">{{ props.router.macAddress || '—' }}</p>
+                <p class="font-mono text-sm">
+                  {{ props.router.macAddress || '—' }}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -201,7 +218,9 @@ function formatDate(dateString: string | null | undefined) {
                   <User class="h-3 w-3" />
                   Username
                 </div>
-                <p class="font-mono text-sm font-medium">{{ props.router.username }}</p>
+                <p class="font-mono text-sm font-medium">
+                  {{ props.router.username }}
+                </p>
               </div>
 
               <!-- Password (masked) -->
@@ -210,7 +229,9 @@ function formatDate(dateString: string | null | undefined) {
                   <Lock class="h-3 w-3" />
                   Password
                 </div>
-                <p class="font-mono text-sm text-muted-foreground">••••••••••••</p>
+                <p class="font-mono text-sm text-muted-foreground">
+                  ••••••••••••
+                </p>
               </div>
 
               <!-- API Port -->
@@ -219,7 +240,9 @@ function formatDate(dateString: string | null | undefined) {
                   <Network class="h-3 w-3" />
                   API Port
                 </div>
-                <p class="font-mono text-sm">{{ props.router.apiPort || 8728 }}</p>
+                <p class="font-mono text-sm">
+                  {{ props.router.apiPort || 8728 }}
+                </p>
               </div>
 
               <!-- SSH Port -->
@@ -228,7 +251,9 @@ function formatDate(dateString: string | null | undefined) {
                   <Network class="h-3 w-3" />
                   SSH Port
                 </div>
-                <p class="font-mono text-sm">{{ props.router.sshPort || 22 }}</p>
+                <p class="font-mono text-sm">
+                  {{ props.router.sshPort || 22 }}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -250,7 +275,9 @@ function formatDate(dateString: string | null | undefined) {
                   <Clock class="h-3 w-3" />
                   Created At
                 </div>
-                <p class="font-mono text-sm">{{ formatDate(props.router.createdAt) }}</p>
+                <p class="font-mono text-sm">
+                  {{ formatDate(props.router.createdAt) }}
+                </p>
               </div>
 
               <!-- Updated At -->
@@ -259,7 +286,9 @@ function formatDate(dateString: string | null | undefined) {
                   <Clock class="h-3 w-3" />
                   Updated At
                 </div>
-                <p class="font-mono text-sm">{{ formatDate(props.router.updatedAt) }}</p>
+                <p class="font-mono text-sm">
+                  {{ formatDate(props.router.updatedAt) }}
+                </p>
               </div>
 
               <!-- Last Seen -->
@@ -268,7 +297,9 @@ function formatDate(dateString: string | null | undefined) {
                   <Clock class="h-3 w-3" />
                   Last Seen
                 </div>
-                <p class="font-mono text-sm text-emerald-400">{{ formatDate(props.router.lastSeen) }}</p>
+                <p class="font-mono text-sm text-emerald-400">
+                  {{ formatDate(props.router.lastSeen) }}
+                </p>
               </div>
             </div>
           </CardContent>

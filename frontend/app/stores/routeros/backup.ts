@@ -1,36 +1,36 @@
-import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
 import type {
-  RouterBackup,
-  BackupRestore,
   BackupFilters,
+  BackupRestore,
   BackupStats,
-  TriggerBackupRequest,
-  RestoreBackupRequest,
+  ListBackupsQuery,
   PinBackupRequest,
-  ListBackupsQuery
-} from '~/types/backup';
+  RestoreBackupRequest,
+  RouterBackup,
+  TriggerBackupRequest,
+} from '~/types/backup'
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 
 /**
  * RouterOS Backup Store
  * Manages backup state and API interactions
  */
 export const useBackupStore = defineStore('routeros-backup', () => {
-  const config = useRuntimeConfig();
-  const API_BASE = config.public.apiBase;
+  const config = useRuntimeConfig()
+  const API_BASE = config.public.apiBase
 
   // State
-  const backups = ref<RouterBackup[]>([]);
-  const currentBackup = ref<RouterBackup | null>(null);
-  const restoreHistory = ref<BackupRestore[]>([]);
-  const loading = ref(false);
-  const error = ref<string | null>(null);
+  const backups = ref<RouterBackup[]>([])
+  const currentBackup = ref<RouterBackup | null>(null)
+  const restoreHistory = ref<BackupRestore[]>([])
+  const loading = ref(false)
+  const error = ref<string | null>(null)
 
   // Pagination
-  const total = ref(0);
-  const limit = ref(50);
-  const offset = ref(0);
-  const hasMore = ref(false);
+  const total = ref(0)
+  const limit = ref(50)
+  const offset = ref(0)
+  const hasMore = ref(false)
 
   // Filters
   const filters = ref<BackupFilters>({
@@ -38,16 +38,16 @@ export const useBackupStore = defineStore('routeros-backup', () => {
     companyId: undefined,
     status: null,
     isPinned: null,
-    searchQuery: ''
-  });
+    searchQuery: '',
+  })
 
   // Computed
   const stats = computed<BackupStats>(() => {
-    const completed = backups.value.filter(b => b.backupStatus === 'COMPLETED').length;
-    const failed = backups.value.filter(b => b.backupStatus === 'FAILED').length;
-    const pending = backups.value.filter(b => b.backupStatus === 'PENDING').length;
-    const pinned = backups.value.filter(b => b.isPinned).length;
-    const totalSize = backups.value.reduce((sum, b) => sum + Number(b.fileSize), 0);
+    const completed = backups.value.filter(b => b.backupStatus === 'COMPLETED').length
+    const failed = backups.value.filter(b => b.backupStatus === 'FAILED').length
+    const pending = backups.value.filter(b => b.backupStatus === 'PENDING').length
+    const pinned = backups.value.filter(b => b.isPinned).length
+    const totalSize = backups.value.reduce((sum, b) => sum + Number(b.fileSize), 0)
 
     return {
       total: backups.value.length,
@@ -56,37 +56,37 @@ export const useBackupStore = defineStore('routeros-backup', () => {
       pending,
       pinned,
       totalSize,
-      totalSizeMB: Math.round((totalSize / 1024 / 1024) * 100) / 100
-    };
-  });
+      totalSizeMB: Math.round((totalSize / 1024 / 1024) * 100) / 100,
+    }
+  })
 
   const filteredBackups = computed(() => {
-    let result = [...backups.value];
+    let result = [...backups.value]
 
     // Apply filters
     if (filters.value.routerId) {
-      result = result.filter(b => b.routerId === filters.value.routerId);
+      result = result.filter(b => b.routerId === filters.value.routerId)
     }
 
     if (filters.value.status) {
-      result = result.filter(b => b.backupStatus === filters.value.status);
+      result = result.filter(b => b.backupStatus === filters.value.status)
     }
 
     if (filters.value.isPinned !== null) {
-      result = result.filter(b => b.isPinned === filters.value.isPinned);
+      result = result.filter(b => b.isPinned === filters.value.isPinned)
     }
 
     if (filters.value.searchQuery) {
-      const query = filters.value.searchQuery.toLowerCase();
+      const query = filters.value.searchQuery.toLowerCase()
       result = result.filter(b =>
-        b.router?.name.toLowerCase().includes(query) ||
-        b.router?.ipAddress.includes(query) ||
-        b.checksum.toLowerCase().includes(query)
-      );
+        b.router?.name.toLowerCase().includes(query)
+        || b.router?.ipAddress.includes(query)
+        || b.checksum.toLowerCase().includes(query),
+      )
     }
 
-    return result;
-  });
+    return result
+  })
 
   // Actions
 
@@ -94,43 +94,51 @@ export const useBackupStore = defineStore('routeros-backup', () => {
    * Fetch all backups with filters
    */
   async function fetchBackups(query?: ListBackupsQuery) {
-    loading.value = true;
-    error.value = null;
+    loading.value = true
+    error.value = null
 
     try {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams()
 
-      if (query?.routerId) params.append('routerId', query.routerId);
-      if (query?.companyId) params.append('companyId', query.companyId);
-      if (query?.status) params.append('status', query.status);
-      if (query?.isPinned !== undefined) params.append('isPinned', String(query.isPinned));
-      if (query?.limit) params.append('limit', String(query.limit));
-      if (query?.offset) params.append('offset', String(query.offset));
+      if (query?.routerId)
+        params.append('routerId', query.routerId)
+      if (query?.companyId)
+        params.append('companyId', query.companyId)
+      if (query?.status)
+        params.append('status', query.status)
+      if (query?.isPinned !== undefined)
+        params.append('isPinned', String(query.isPinned))
+      if (query?.limit)
+        params.append('limit', String(query.limit))
+      if (query?.offset)
+        params.append('offset', String(query.offset))
 
       const response = await fetch(`${API_BASE}/routeros/backup?${params}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
 
       if (!response.ok) {
-        throw new Error('Failed to fetch backups');
+        throw new Error('Failed to fetch backups')
       }
 
-      const result = await response.json();
+      const result = await response.json()
 
-      backups.value = result.data;
-      total.value = result.pagination.total;
-      limit.value = result.pagination.limit;
-      offset.value = result.pagination.offset;
-      hasMore.value = result.pagination.hasMore;
+      backups.value = result.data
+      total.value = result.pagination.total
+      limit.value = result.pagination.limit
+      offset.value = result.pagination.offset
+      hasMore.value = result.pagination.hasMore
 
-      return result.data;
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error';
-      throw err;
-    } finally {
-      loading.value = false;
+      return result.data
+    }
+    catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
+      throw err
+    }
+    finally {
+      loading.value = false
     }
   }
 
@@ -138,29 +146,31 @@ export const useBackupStore = defineStore('routeros-backup', () => {
    * Fetch single backup by ID
    */
   async function fetchBackupById(backupId: string) {
-    loading.value = true;
-    error.value = null;
+    loading.value = true
+    error.value = null
 
     try {
       const response = await fetch(`${API_BASE}/routeros/backup/${backupId}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
 
       if (!response.ok) {
-        throw new Error('Failed to fetch backup');
+        throw new Error('Failed to fetch backup')
       }
 
-      const result = await response.json();
-      currentBackup.value = result.data;
+      const result = await response.json()
+      currentBackup.value = result.data
 
-      return result.data;
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error';
-      throw err;
-    } finally {
-      loading.value = false;
+      return result.data
+    }
+    catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
+      throw err
+    }
+    finally {
+      loading.value = false
     }
   }
 
@@ -168,35 +178,37 @@ export const useBackupStore = defineStore('routeros-backup', () => {
    * Trigger manual backup
    */
   async function triggerBackup(data: TriggerBackupRequest) {
-    loading.value = true;
-    error.value = null;
+    loading.value = true
+    error.value = null
 
     try {
       const response = await fetch(`${API_BASE}/routeros/backup/${data.routerId}/trigger`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify(data)
-      });
+        body: JSON.stringify(data),
+      })
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to trigger backup');
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to trigger backup')
       }
 
-      const result = await response.json();
+      const result = await response.json()
 
       // Add new backup to list
-      backups.value.unshift(result.data);
+      backups.value.unshift(result.data)
 
-      return result.data;
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error';
-      throw err;
-    } finally {
-      loading.value = false;
+      return result.data
+    }
+    catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
+      throw err
+    }
+    finally {
+      loading.value = false
     }
   }
 
@@ -204,28 +216,30 @@ export const useBackupStore = defineStore('routeros-backup', () => {
    * Get presigned download URL
    */
   async function getDownloadUrl(backupId: string, expiresIn: number = 3600) {
-    loading.value = true;
-    error.value = null;
+    loading.value = true
+    error.value = null
 
     try {
       const response = await fetch(`${API_BASE}/routeros/backup/${backupId}/download?expiresIn=${expiresIn}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
 
       if (!response.ok) {
-        throw new Error('Failed to get download URL');
+        throw new Error('Failed to get download URL')
       }
 
-      const result = await response.json();
+      const result = await response.json()
 
-      return result.data.url;
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error';
-      throw err;
-    } finally {
-      loading.value = false;
+      return result.data.url
+    }
+    catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
+      throw err
+    }
+    finally {
+      loading.value = false
     }
   }
 
@@ -234,18 +248,19 @@ export const useBackupStore = defineStore('routeros-backup', () => {
    */
   async function downloadBackup(backupId: string, filename?: string) {
     try {
-      const url = await getDownloadUrl(backupId);
+      const url = await getDownloadUrl(backupId)
 
       // Trigger browser download
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename || `backup-${backupId}.rsc`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error';
-      throw err;
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename || `backup-${backupId}.rsc`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+    catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
+      throw err
     }
   }
 
@@ -253,35 +268,37 @@ export const useBackupStore = defineStore('routeros-backup', () => {
    * Restore backup to router
    */
   async function restoreBackup(backupId: string, data: RestoreBackupRequest) {
-    loading.value = true;
-    error.value = null;
+    loading.value = true
+    error.value = null
 
     try {
       const response = await fetch(`${API_BASE}/routeros/backup/${backupId}/restore`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify(data)
-      });
+        body: JSON.stringify(data),
+      })
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to restore backup');
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to restore backup')
       }
 
-      const result = await response.json();
+      const result = await response.json()
 
       // Refresh restore history
-      await fetchRestoreHistory(backupId);
+      await fetchRestoreHistory(backupId)
 
-      return result.data;
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error';
-      throw err;
-    } finally {
-      loading.value = false;
+      return result.data
+    }
+    catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
+      throw err
+    }
+    finally {
+      loading.value = false
     }
   }
 
@@ -289,29 +306,31 @@ export const useBackupStore = defineStore('routeros-backup', () => {
    * Fetch restore history for a backup
    */
   async function fetchRestoreHistory(backupId: string) {
-    loading.value = true;
-    error.value = null;
+    loading.value = true
+    error.value = null
 
     try {
       const response = await fetch(`${API_BASE}/routeros/backup/${backupId}/restore-history`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
 
       if (!response.ok) {
-        throw new Error('Failed to fetch restore history');
+        throw new Error('Failed to fetch restore history')
       }
 
-      const result = await response.json();
-      restoreHistory.value = result.data;
+      const result = await response.json()
+      restoreHistory.value = result.data
 
-      return result.data;
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error';
-      throw err;
-    } finally {
-      loading.value = false;
+      return result.data
+    }
+    catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
+      throw err
+    }
+    finally {
+      loading.value = false
     }
   }
 
@@ -319,43 +338,45 @@ export const useBackupStore = defineStore('routeros-backup', () => {
    * Pin or unpin backup
    */
   async function togglePin(backupId: string, data?: PinBackupRequest) {
-    loading.value = true;
-    error.value = null;
+    loading.value = true
+    error.value = null
 
     try {
       const response = await fetch(`${API_BASE}/routeros/backup/${backupId}/pin`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify(data || {})
-      });
+        body: JSON.stringify(data || {}),
+      })
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to toggle pin');
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to toggle pin')
       }
 
-      const result = await response.json();
+      const result = await response.json()
 
       // Update backup in list
-      const index = backups.value.findIndex(b => b.id === backupId);
+      const index = backups.value.findIndex(b => b.id === backupId)
       if (index !== -1) {
-        backups.value[index] = result.data;
+        backups.value[index] = result.data
       }
 
       // Update current backup if it's the same
       if (currentBackup.value?.id === backupId) {
-        currentBackup.value = result.data;
+        currentBackup.value = result.data
       }
 
-      return result.data;
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error';
-      throw err;
-    } finally {
-      loading.value = false;
+      return result.data
+    }
+    catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
+      throw err
+    }
+    finally {
+      loading.value = false
     }
   }
 
@@ -363,34 +384,36 @@ export const useBackupStore = defineStore('routeros-backup', () => {
    * Delete backup
    */
   async function deleteBackup(backupId: string) {
-    loading.value = true;
-    error.value = null;
+    loading.value = true
+    error.value = null
 
     try {
       const response = await fetch(`${API_BASE}/routeros/backup/${backupId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete backup');
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to delete backup')
       }
 
       // Remove from list
-      backups.value = backups.value.filter(b => b.id !== backupId);
+      backups.value = backups.value.filter(b => b.id !== backupId)
 
       // Clear current backup if it's the same
       if (currentBackup.value?.id === backupId) {
-        currentBackup.value = null;
+        currentBackup.value = null
       }
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error';
-      throw err;
-    } finally {
-      loading.value = false;
+    }
+    catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
+      throw err
+    }
+    finally {
+      loading.value = false
     }
   }
 
@@ -398,7 +421,7 @@ export const useBackupStore = defineStore('routeros-backup', () => {
    * Update filters
    */
   function setFilters(newFilters: Partial<BackupFilters>) {
-    filters.value = { ...filters.value, ...newFilters };
+    filters.value = { ...filters.value, ...newFilters }
   }
 
   /**
@@ -410,31 +433,31 @@ export const useBackupStore = defineStore('routeros-backup', () => {
       companyId: undefined,
       status: null,
       isPinned: null,
-      searchQuery: ''
-    };
+      searchQuery: '',
+    }
   }
 
   /**
    * Clear error
    */
   function clearError() {
-    error.value = null;
+    error.value = null
   }
 
   /**
    * Reset store
    */
   function $reset() {
-    backups.value = [];
-    currentBackup.value = null;
-    restoreHistory.value = [];
-    loading.value = false;
-    error.value = null;
-    total.value = 0;
-    limit.value = 50;
-    offset.value = 0;
-    hasMore.value = false;
-    resetFilters();
+    backups.value = []
+    currentBackup.value = null
+    restoreHistory.value = []
+    loading.value = false
+    error.value = null
+    total.value = 0
+    limit.value = 50
+    offset.value = 0
+    hasMore.value = false
+    resetFilters()
   }
 
   return {
@@ -467,6 +490,6 @@ export const useBackupStore = defineStore('routeros-backup', () => {
     setFilters,
     resetFilters,
     clearError,
-    $reset
-  };
-});
+    $reset,
+  }
+})

@@ -82,25 +82,27 @@ export const useRouterStore = defineStore('router', {
         const authStore = useAuthStore()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
-        const response = await $fetch<{ status: string; data: Router[] }>(
+        const response = await $fetch<{ status: string, data: Router[] }>(
           `${apiBase}/routers`,
           {
             headers: {
               Authorization: `Bearer ${authStore.token}`,
             },
-          }
+          },
         )
 
         this.routers = response.data
         return { success: true, data: response.data }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Fetch routers error:', error)
         this.error = error?.data?.message || 'Failed to fetch routers'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -114,25 +116,27 @@ export const useRouterStore = defineStore('router', {
         const authStore = useAuthStore()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
-        const response = await $fetch<{ status: string; data: Router }>(
+        const response = await $fetch<{ status: string, data: Router }>(
           `${apiBase}/routers/${id}`,
           {
             headers: {
               Authorization: `Bearer ${authStore.token}`,
             },
-          }
+          },
         )
 
         this.currentRouter = response.data
         return { success: true, data: response.data }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Fetch router error:', error)
         this.error = error?.data?.message || 'Failed to fetch router'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -146,7 +150,7 @@ export const useRouterStore = defineStore('router', {
         const authStore = useAuthStore()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
-        const response = await $fetch<{ status: string; data: Router }>(
+        const response = await $fetch<{ status: string, data: Router }>(
           `${apiBase}/routers`,
           {
             method: 'POST',
@@ -154,20 +158,22 @@ export const useRouterStore = defineStore('router', {
               Authorization: `Bearer ${authStore.token}`,
             },
             body: data,
-          }
+          },
         )
 
         // Add new router to the list
         this.routers.push(response.data)
         return { success: true, data: response.data }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Create router error:', error)
         this.error = error?.data?.message || 'Failed to create router'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -181,7 +187,7 @@ export const useRouterStore = defineStore('router', {
         const authStore = useAuthStore()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
-        const response = await $fetch<{ status: string; data: Router }>(
+        const response = await $fetch<{ status: string, data: Router }>(
           `${apiBase}/routers/${id}`,
           {
             method: 'PUT',
@@ -189,11 +195,11 @@ export const useRouterStore = defineStore('router', {
               Authorization: `Bearer ${authStore.token}`,
             },
             body: data,
-          }
+          },
         )
 
         // Update router in the list
-        const index = this.routers.findIndex((r) => r.id === id)
+        const index = this.routers.findIndex(r => r.id === id)
         if (index !== -1) {
           this.routers[index] = response.data
         }
@@ -204,14 +210,16 @@ export const useRouterStore = defineStore('router', {
         }
 
         return { success: true, data: response.data }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Update router error:', error)
         this.error = error?.data?.message || 'Failed to update router'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -233,7 +241,7 @@ export const useRouterStore = defineStore('router', {
         })
 
         // Remove router from the list
-        this.routers = this.routers.filter((r) => r.id !== id)
+        this.routers = this.routers.filter(r => r.id !== id)
 
         // Clear current router if it's the one being deleted
         if (this.currentRouter?.id === id) {
@@ -241,14 +249,16 @@ export const useRouterStore = defineStore('router', {
         }
 
         return { success: true }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Delete router error:', error)
         this.error = error?.data?.message || 'Failed to delete router'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -263,18 +273,18 @@ export const useRouterStore = defineStore('router', {
   },
 
   getters: {
-    activeRouters: (state) =>
-      state.routers.filter((r) => r.status === 'ACTIVE'),
+    activeRouters: state =>
+      state.routers.filter(r => r.status === 'ACTIVE'),
 
-    inactiveRouters: (state) =>
-      state.routers.filter((r) => r.status === 'INACTIVE'),
+    inactiveRouters: state =>
+      state.routers.filter(r => r.status === 'INACTIVE'),
 
-    maintenanceRouters: (state) =>
-      state.routers.filter((r) => r.status === 'MAINTENANCE'),
+    maintenanceRouters: state =>
+      state.routers.filter(r => r.status === 'MAINTENANCE'),
 
-    routerCount: (state) => state.routers.length,
+    routerCount: state => state.routers.length,
 
-    getRouterById: (state) => (id: string) =>
-      state.routers.find((r) => r.id === id),
+    getRouterById: state => (id: string) =>
+      state.routers.find(r => r.id === id),
   },
 })

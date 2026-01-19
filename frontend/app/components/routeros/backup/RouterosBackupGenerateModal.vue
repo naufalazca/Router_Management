@@ -1,26 +1,26 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useBackupStore } from '~/stores/routeros/backup'
-import { BackupType } from '~/types/backup'
 import type { Router } from '~/stores/router'
+import { computed, ref } from 'vue'
+import { Button } from '~/components/ui/button'
+import { Checkbox } from '~/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '~/components/ui/dialog'
-import { Button } from '~/components/ui/button'
 import { Label } from '~/components/ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from '~/components/ui/select'
-import { Checkbox } from '~/components/ui/checkbox'
+import { useBackupStore } from '~/stores/routeros/backup'
+import { BackupType } from '~/types/backup'
 
 const props = defineProps<{
   open: boolean
@@ -62,14 +62,16 @@ async function handleSubmit() {
     await backupStore.triggerBackup({
       routerId: selectedRouterId.value,
       compact: compact.value,
-      backupType: backupType.value
+      backupType: backupType.value,
     })
 
     emit('success')
     resetForm()
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Failed to create backup:', error)
-  } finally {
+  }
+  finally {
     isSubmitting.value = false
   }
 }
@@ -155,7 +157,9 @@ function handleOpenChange(value: boolean) {
             <SelectContent>
               <SelectItem :value="BackupType.EXPORT">
                 <div>
-                  <div class="font-medium">Export (.rsc)</div>
+                  <div class="font-medium">
+                    Export (.rsc)
+                  </div>
                   <div class="text-sm text-muted-foreground">
                     Text-based configuration script
                   </div>
@@ -163,7 +167,9 @@ function handleOpenChange(value: boolean) {
               </SelectItem>
               <SelectItem :value="BackupType.BINARY" disabled>
                 <div>
-                  <div class="font-medium">Binary (.backup)</div>
+                  <div class="font-medium">
+                    Binary (.backup)
+                  </div>
                   <div class="text-sm text-muted-foreground">
                     Full system backup (coming soon)
                   </div>
@@ -199,14 +205,14 @@ function handleOpenChange(value: boolean) {
       <DialogFooter>
         <Button
           variant="outline"
-          @click="handleOpenChange(false)"
           :disabled="isSubmitting"
+          @click="handleOpenChange(false)"
         >
           Cancel
         </Button>
         <Button
-          @click="handleSubmit"
           :disabled="!selectedRouterId || isSubmitting || activeRouters.length === 0"
+          @click="handleSubmit"
         >
           <span v-if="isSubmitting">Creating Backup...</span>
           <span v-else>Create Backup</span>

@@ -1,16 +1,31 @@
 <script setup lang="ts">
+import type { Company, CompanyRouter } from '~/stores/company'
+import {
+  Building2,
+  CheckCircle2,
+  Clock,
+  Code,
+  FileText,
+  Image,
+  Key,
+  MapPin,
+  Server,
+  User,
+  Wrench,
+  XCircle,
+} from 'lucide-vue-next'
 import { ref, watch } from 'vue'
-import { useCompanyStore, type Company, type CompanyRouter } from '~/stores/company'
+import { toast } from 'vue-sonner'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   Table,
   TableBody,
@@ -19,21 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Building2,
-  MapPin,
-  User,
-  Key,
-  Code,
-  FileText,
-  Image,
-  Server,
-  CheckCircle2,
-  XCircle,
-  Wrench,
-  Clock
-} from 'lucide-vue-next'
-import { toast } from 'vue-sonner'
+import { useCompanyStore } from '~/stores/company'
 
 const props = defineProps<{
   open: boolean
@@ -54,18 +55,18 @@ const statusConfig = {
   ACTIVE: {
     icon: CheckCircle2,
     color: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/10 border-emerald-500/20'
+    bgColor: 'bg-emerald-500/10 border-emerald-500/20',
   },
   INACTIVE: {
     icon: XCircle,
     color: 'text-slate-400',
-    bgColor: 'bg-slate-500/10 border-slate-500/20'
+    bgColor: 'bg-slate-500/10 border-slate-500/20',
   },
   MAINTENANCE: {
     icon: Wrench,
     color: 'text-amber-400',
-    bgColor: 'bg-amber-500/10 border-amber-500/20'
-  }
+    bgColor: 'bg-amber-500/10 border-amber-500/20',
+  },
 }
 
 // Reset state when dialog closes
@@ -74,27 +75,31 @@ watch(() => props.open, (newVal) => {
     routersLoaded.value = false
     companyStore.clearCompanyRouters()
     companyDetails.value = null
-  } else if (newVal && props.company) {
+  }
+  else if (newVal && props.company) {
     // Fetch full company details when opening
     fetchCompanyDetails()
   }
 })
 
 async function fetchCompanyDetails() {
-  if (!props.company) return
+  if (!props.company)
+    return
 
   try {
     const result = await companyStore.fetchCompanyById(props.company.id)
     if (result.success && result.data) {
       companyDetails.value = result.data
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Error fetching company details:', error)
   }
 }
 
 async function fetchRouters() {
-  if (!props.company || isLoadingRouters.value) return
+  if (!props.company || isLoadingRouters.value)
+    return
 
   isLoadingRouters.value = true
 
@@ -103,25 +108,29 @@ async function fetchRouters() {
     if (result.success) {
       routersLoaded.value = true
       toast.success(`Loaded ${companyStore.companyRouters.length} routers`)
-    } else {
+    }
+    else {
       toast.error(result.error || 'Failed to load routers')
     }
-  } catch (error) {
+  }
+  catch (error) {
     toast.error('An unexpected error occurred')
-  } finally {
+  }
+  finally {
     isLoadingRouters.value = false
   }
 }
 
 function formatDate(dateString: string | null | undefined) {
-  if (!dateString) return 'Never'
+  if (!dateString)
+    return 'Never'
   const date = new Date(dateString)
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   }).format(date)
 }
 </script>
@@ -130,7 +139,9 @@ function formatDate(dateString: string | null | undefined) {
   <Dialog :open="props.open" @update:open="(val) => emit('update:open', val)">
     <DialogContent class="sm:max-w-[800px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
       <DialogHeader>
-        <DialogTitle class="font-mono">Company Details</DialogTitle>
+        <DialogTitle class="font-mono">
+          Company Details
+        </DialogTitle>
         <DialogDescription class="font-mono text-xs">
           View company information and associated routers
         </DialogDescription>
@@ -153,7 +164,9 @@ function formatDate(dateString: string | null | undefined) {
                   <Building2 class="h-3 w-3" />
                   Company Name
                 </div>
-                <p class="font-mono text-sm font-medium">{{ companyDetails?.name || props.company?.name }}</p>
+                <p class="font-mono text-sm font-medium">
+                  {{ companyDetails?.name || props.company?.name }}
+                </p>
               </div>
 
               <!-- Code -->
@@ -162,7 +175,9 @@ function formatDate(dateString: string | null | undefined) {
                   <Code class="h-3 w-3" />
                   Company Code
                 </div>
-                <p class="font-mono text-sm font-medium text-cyan-400">{{ companyDetails?.code || props.company?.code }}</p>
+                <p class="font-mono text-sm font-medium text-cyan-400">
+                  {{ companyDetails?.code || props.company?.code }}
+                </p>
               </div>
 
               <!-- Address -->
@@ -171,7 +186,9 @@ function formatDate(dateString: string | null | undefined) {
                   <MapPin class="h-3 w-3" />
                   Address
                 </div>
-                <p class="font-mono text-sm">{{ companyDetails?.address || props.company?.address }}</p>
+                <p class="font-mono text-sm">
+                  {{ companyDetails?.address || props.company?.address }}
+                </p>
               </div>
 
               <!-- Description -->
@@ -180,7 +197,9 @@ function formatDate(dateString: string | null | undefined) {
                   <FileText class="h-3 w-3" />
                   Description
                 </div>
-                <p class="font-mono text-sm text-muted-foreground">{{ companyDetails?.description || props.company?.description }}</p>
+                <p class="font-mono text-sm text-muted-foreground">
+                  {{ companyDetails?.description || props.company?.description }}
+                </p>
               </div>
 
               <!-- Logo URL -->
@@ -216,7 +235,9 @@ function formatDate(dateString: string | null | undefined) {
                   <User class="h-3 w-3" />
                   Master Username
                 </div>
-                <p class="font-mono text-sm font-medium">{{ companyDetails?.masterUsername || props.company?.masterUsername }}</p>
+                <p class="font-mono text-sm font-medium">
+                  {{ companyDetails?.masterUsername || props.company?.masterUsername }}
+                </p>
               </div>
 
               <!-- Password -->
@@ -247,10 +268,10 @@ function formatDate(dateString: string | null | undefined) {
                 </CardDescription>
               </div>
               <Button
-                @click="fetchRouters"
                 :disabled="isLoadingRouters || routersLoaded"
                 class="command-btn"
                 size="sm"
+                @click="fetchRouters"
               >
                 {{ isLoadingRouters ? 'Loading...' : routersLoaded ? 'Loaded' : 'Load Routers' }}
               </Button>
@@ -273,70 +294,86 @@ function formatDate(dateString: string | null | undefined) {
 
             <div v-else class="table-container">
               <Table class="router-table">
-              <TableHeader>
-                <TableRow class="table-header-row">
-                  <TableHead class="font-mono text-xs">Device</TableHead>
-                  <TableHead class="font-mono text-xs">Network</TableHead>
-                  <TableHead class="font-mono text-xs">Location</TableHead>
-                  <TableHead class="font-mono text-xs">Status</TableHead>
-                  <TableHead class="font-mono text-xs">Last Seen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow
-                  v-for="router in companyStore.companyRouters"
-                  :key="router.id"
-                  class="router-row"
-                >
-                  <TableCell class="font-medium">
-                    <div class="cell-content">
-                      <p class="font-mono text-sm overflow-wrap-anywhere">{{ router.name }}</p>
-                      <p v-if="router.model" class="font-mono text-xs text-muted-foreground overflow-wrap-anywhere">{{ router.model }}</p>
-                    </div>
-                  </TableCell>
+                <TableHeader>
+                  <TableRow class="table-header-row">
+                    <TableHead class="font-mono text-xs">
+                      Device
+                    </TableHead>
+                    <TableHead class="font-mono text-xs">
+                      Network
+                    </TableHead>
+                    <TableHead class="font-mono text-xs">
+                      Location
+                    </TableHead>
+                    <TableHead class="font-mono text-xs">
+                      Status
+                    </TableHead>
+                    <TableHead class="font-mono text-xs">
+                      Last Seen
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow
+                    v-for="router in companyStore.companyRouters"
+                    :key="router.id"
+                    class="router-row"
+                  >
+                    <TableCell class="font-medium">
+                      <div class="cell-content">
+                        <p class="font-mono text-sm overflow-wrap-anywhere">
+                          {{ router.name }}
+                        </p>
+                        <p v-if="router.model" class="font-mono text-xs text-muted-foreground overflow-wrap-anywhere">
+                          {{ router.model }}
+                        </p>
+                      </div>
+                    </TableCell>
 
-                  <TableCell>
-                    <div class="cell-content space-y-0.5">
-                      <p class="font-mono text-xs text-cyan-400 overflow-wrap-anywhere">{{ router.ipAddress }}</p>
-                      <p v-if="router.macAddress" class="font-mono text-xs text-muted-foreground overflow-wrap-anywhere">
-                        {{ router.macAddress }}
-                      </p>
-                    </div>
-                  </TableCell>
+                    <TableCell>
+                      <div class="cell-content space-y-0.5">
+                        <p class="font-mono text-xs text-cyan-400 overflow-wrap-anywhere">
+                          {{ router.ipAddress }}
+                        </p>
+                        <p v-if="router.macAddress" class="font-mono text-xs text-muted-foreground overflow-wrap-anywhere">
+                          {{ router.macAddress }}
+                        </p>
+                      </div>
+                    </TableCell>
 
-                  <TableCell>
-                    <div v-if="router.location" class="cell-content flex items-center gap-1.5">
-                      <MapPin class="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                      <span class="font-mono text-xs overflow-wrap-anywhere flex-1 min-w-0">{{ router.location }}</span>
-                    </div>
-                    <span v-else class="text-muted-foreground">—</span>
-                  </TableCell>
+                    <TableCell>
+                      <div v-if="router.location" class="cell-content flex items-center gap-1.5">
+                        <MapPin class="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        <span class="font-mono text-xs overflow-wrap-anywhere flex-1 min-w-0">{{ router.location }}</span>
+                      </div>
+                      <span v-else class="text-muted-foreground">—</span>
+                    </TableCell>
 
-                  <TableCell>
-                    <Badge
-                      :class="statusConfig[router.status as keyof typeof statusConfig]?.bgColor"
-                      class="status-badge font-mono text-xs gap-1.5"
-                    >
-                      <component
-                        :is="statusConfig[router.status as keyof typeof statusConfig]?.icon"
-                        :class="statusConfig[router.status as keyof typeof statusConfig]?.color"
-                        class="h-3 w-3"
-                      />
-                      {{ router.status }}
-                    </Badge>
-                  </TableCell>
+                    <TableCell>
+                      <Badge
+                        :class="statusConfig[router.status as keyof typeof statusConfig]?.bgColor"
+                        class="status-badge font-mono text-xs gap-1.5"
+                      >
+                        <component
+                          :is="statusConfig[router.status as keyof typeof statusConfig]?.icon"
+                          :class="statusConfig[router.status as keyof typeof statusConfig]?.color"
+                          class="h-3 w-3"
+                        />
+                        {{ router.status }}
+                      </Badge>
+                    </TableCell>
 
-                  <TableCell>
-                    <div class="flex items-center gap-1.5">
-                      <Clock class="h-3 w-3 text-muted-foreground" />
-                      <span class="font-mono text-xs text-muted-foreground">
-                        {{ formatDate(router.lastSeen) }}
-                      </span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+                    <TableCell>
+                      <div class="flex items-center gap-1.5">
+                        <Clock class="h-3 w-3 text-muted-foreground" />
+                        <span class="font-mono text-xs text-muted-foreground">
+                          {{ formatDate(router.lastSeen) }}
+                        </span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>

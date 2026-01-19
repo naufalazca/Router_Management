@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import type { RouterOSUser } from '~/stores/routeros/user'
+import { AlertTriangle } from 'lucide-vue-next'
 import { ref } from 'vue'
-import { useRouterOSUserStore, type RouterOSUser } from '~/stores/routeros/user'
+import { toast } from 'vue-sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,8 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { AlertTriangle } from 'lucide-vue-next'
-import { toast } from 'vue-sonner'
+import { useRouterOSUserStore } from '~/stores/routeros/user'
 
 const props = defineProps<{
   open: boolean
@@ -29,7 +30,8 @@ const routerosUserStore = useRouterOSUserStore()
 const isDeleting = ref(false)
 
 async function handleDelete() {
-  if (!props.user) return
+  if (!props.user)
+    return
 
   isDeleting.value = true
 
@@ -40,12 +42,15 @@ async function handleDelete() {
       toast.success(`User "${props.user.name}" deleted successfully`)
       emit('success')
       emit('update:open', false)
-    } else {
+    }
+    else {
       toast.error(result.error || 'Failed to delete user')
     }
-  } catch (error) {
+  }
+  catch (error) {
     toast.error('An unexpected error occurred')
-  } finally {
+  }
+  finally {
     isDeleting.value = false
   }
 }
@@ -66,7 +71,9 @@ function handleCancel() {
             <AlertTriangle class="h-6 w-6 text-destructive" />
           </div>
           <div class="flex-1">
-            <AlertDialogTitle class="font-mono text-lg">Delete RouterOS User</AlertDialogTitle>
+            <AlertDialogTitle class="font-mono text-lg">
+              Delete RouterOS User
+            </AlertDialogTitle>
             <AlertDialogDescription class="font-mono text-xs mt-1">
               This action cannot be undone
             </AlertDialogDescription>
@@ -126,16 +133,16 @@ function handleCancel() {
 
       <AlertDialogFooter>
         <AlertDialogCancel
-          @click="handleCancel"
           :disabled="isDeleting"
           class="font-mono"
+          @click="handleCancel"
         >
           Cancel
         </AlertDialogCancel>
         <AlertDialogAction
-          @click="handleDelete"
           :disabled="isDeleting"
           class="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-mono"
+          @click="handleDelete"
         >
           {{ isDeleting ? 'Deleting...' : 'Delete User' }}
         </AlertDialogAction>

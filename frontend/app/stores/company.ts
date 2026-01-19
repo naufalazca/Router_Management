@@ -76,25 +76,27 @@ export const useCompanyStore = defineStore('company', {
         const authStore = useAuthStore()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
-        const response = await $fetch<{ status: string; data: Company[] }>(
+        const response = await $fetch<{ status: string, data: Company[] }>(
           `${apiBase}/companies`,
           {
             headers: {
               Authorization: `Bearer ${authStore.token}`,
             },
-          }
+          },
         )
 
         this.companies = response.data
         return { success: true, data: response.data }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Fetch companies error:', error)
         this.error = error?.data?.message || 'Failed to fetch companies'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -108,25 +110,27 @@ export const useCompanyStore = defineStore('company', {
         const authStore = useAuthStore()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
-        const response = await $fetch<{ status: string; data: Company }>(
+        const response = await $fetch<{ status: string, data: Company }>(
           `${apiBase}/companies/${id}`,
           {
             headers: {
               Authorization: `Bearer ${authStore.token}`,
             },
-          }
+          },
         )
 
         this.currentCompany = response.data
         return { success: true, data: response.data }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Fetch company error:', error)
         this.error = error?.data?.message || 'Failed to fetch company'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -140,25 +144,27 @@ export const useCompanyStore = defineStore('company', {
         const authStore = useAuthStore()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
-        const response = await $fetch<{ status: string; data: Company }>(
+        const response = await $fetch<{ status: string, data: Company }>(
           `${apiBase}/companies/code/${code}`,
           {
             headers: {
               Authorization: `Bearer ${authStore.token}`,
             },
-          }
+          },
         )
 
         this.currentCompany = response.data
         return { success: true, data: response.data }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Fetch company by code error:', error)
         this.error = error?.data?.message || 'Failed to fetch company'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -172,7 +178,7 @@ export const useCompanyStore = defineStore('company', {
         const authStore = useAuthStore()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
-        const response = await $fetch<{ status: string; data: Company }>(
+        const response = await $fetch<{ status: string, data: Company }>(
           `${apiBase}/companies`,
           {
             method: 'POST',
@@ -180,20 +186,22 @@ export const useCompanyStore = defineStore('company', {
               Authorization: `Bearer ${authStore.token}`,
             },
             body: data,
-          }
+          },
         )
 
         // Add new company to the list
         this.companies.push(response.data)
         return { success: true, data: response.data }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Create company error:', error)
         this.error = error?.data?.message || 'Failed to create company'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -207,7 +215,7 @@ export const useCompanyStore = defineStore('company', {
         const authStore = useAuthStore()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
-        const response = await $fetch<{ status: string; data: Company }>(
+        const response = await $fetch<{ status: string, data: Company }>(
           `${apiBase}/companies/${id}`,
           {
             method: 'PUT',
@@ -215,11 +223,11 @@ export const useCompanyStore = defineStore('company', {
               Authorization: `Bearer ${authStore.token}`,
             },
             body: data,
-          }
+          },
         )
 
         // Update company in the list
-        const index = this.companies.findIndex((c) => c.id === id)
+        const index = this.companies.findIndex(c => c.id === id)
         if (index !== -1) {
           this.companies[index] = response.data
         }
@@ -230,14 +238,16 @@ export const useCompanyStore = defineStore('company', {
         }
 
         return { success: true, data: response.data }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Update company error:', error)
         this.error = error?.data?.message || 'Failed to update company'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -259,7 +269,7 @@ export const useCompanyStore = defineStore('company', {
         })
 
         // Remove company from the list
-        this.companies = this.companies.filter((c) => c.id !== id)
+        this.companies = this.companies.filter(c => c.id !== id)
 
         // Clear current company if it's the one being deleted
         if (this.currentCompany?.id === id) {
@@ -267,14 +277,16 @@ export const useCompanyStore = defineStore('company', {
         }
 
         return { success: true }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Delete company error:', error)
         this.error = error?.data?.message || 'Failed to delete company'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -288,25 +300,27 @@ export const useCompanyStore = defineStore('company', {
         const authStore = useAuthStore()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
-        const response = await $fetch<{ status: string; data: CompanyRouter[] }>(
+        const response = await $fetch<{ status: string, data: CompanyRouter[] }>(
           `${apiBase}/companies/${companyId}/routers`,
           {
             headers: {
               Authorization: `Bearer ${authStore.token}`,
             },
-          }
+          },
         )
 
         this.companyRouters = response.data
         return { success: true, data: response.data }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Fetch company routers error:', error)
         this.error = error?.data?.message || 'Failed to fetch company routers'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -325,21 +339,21 @@ export const useCompanyStore = defineStore('company', {
   },
 
   getters: {
-    companyCount: (state) => state.companies.length,
+    companyCount: state => state.companies.length,
 
-    getCompanyById: (state) => (id: string) =>
-      state.companies.find((c) => c.id === id),
+    getCompanyById: state => (id: string) =>
+      state.companies.find(c => c.id === id),
 
-    getCompanyByCode: (state) => (code: string) =>
-      state.companies.find((c) => c.code === code),
+    getCompanyByCode: state => (code: string) =>
+      state.companies.find(c => c.code === code),
 
-    companiesWithRouters: (state) =>
-      state.companies.filter((c) => (c.routerCount ?? 0) > 0),
+    companiesWithRouters: state =>
+      state.companies.filter(c => (c.routerCount ?? 0) > 0),
 
-    companiesWithoutRouters: (state) =>
-      state.companies.filter((c) => (c.routerCount ?? 0) === 0),
+    companiesWithoutRouters: state =>
+      state.companies.filter(c => (c.routerCount ?? 0) === 0),
 
-    totalRoutersAcrossCompanies: (state) =>
+    totalRoutersAcrossCompanies: state =>
       state.companies.reduce((sum, c) => sum + (c.routerCount ?? 0), 0),
   },
 })

@@ -1,23 +1,29 @@
 <script setup lang="ts">
-import type { RouterBackup } from '~/types/backup'
 import type { Router } from '~/stores/router'
-import { BackupStatus } from '~/types/backup'
+import type { BackupStatus, RouterBackup } from '~/types/backup'
 import {
-  Eye,
-  Download,
-  RotateCcw,
-  Trash2,
+  AlertCircle,
   Archive,
+  CheckCircle2,
+  Clock,
+  Download,
+  Eye,
   Pin,
   PinOff,
-  CheckCircle2,
+  RotateCcw,
+  Trash2,
   XCircle,
-  Clock,
-  AlertCircle
 } from 'lucide-vue-next'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -26,13 +32,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from '@/components/ui/dropdown-menu'
 
 defineProps<{
   backups: RouterBackup[]
@@ -57,48 +56,50 @@ const statusConfig = {
     icon: CheckCircle2,
     variant: 'default' as const,
     color: 'text-green-600',
-    label: 'Completed'
+    label: 'Completed',
   },
   PENDING: {
     icon: Clock,
     variant: 'secondary' as const,
     color: 'text-yellow-600',
-    label: 'Pending'
+    label: 'Pending',
   },
   FAILED: {
     icon: XCircle,
     variant: 'destructive' as const,
     color: 'text-red-600',
-    label: 'Failed'
+    label: 'Failed',
   },
   EXPIRED: {
     icon: AlertCircle,
     variant: 'outline' as const,
     color: 'text-gray-600',
-    label: 'Expired'
-  }
+    label: 'Expired',
+  },
 }
 
 // Format date
 function formatDate(dateString: string | null | undefined) {
-  if (!dateString) return 'N/A'
+  if (!dateString)
+    return 'N/A'
   const date = new Date(dateString)
   return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   }).format(date)
 }
 
 // Format file size
 function formatFileSize(bytes: number) {
-  if (bytes === 0) return '0 B'
+  if (bytes === 0)
+    return '0 B'
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
+  return `${(bytes / k ** i).toFixed(2)} ${sizes[i]}`
 }
 
 // Get trigger type badge
@@ -117,7 +118,7 @@ function getTriggerBadge(triggerType: string) {
     </CardHeader>
     <CardContent>
       <div v-if="isLoading" class="flex items-center justify-center py-12">
-        <div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+        <div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
       </div>
 
       <div v-else-if="backups.length === 0" class="flex flex-col items-center justify-center gap-4 py-12">
@@ -137,7 +138,9 @@ function getTriggerBadge(triggerType: string) {
               <TableHead>Size</TableHead>
               <TableHead>Version</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead class="text-right">Actions</TableHead>
+              <TableHead class="text-right">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -210,8 +213,8 @@ function getTriggerBadge(triggerType: string) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    @click="emit('view', backup)"
                     title="View Details"
+                    @click="emit('view', backup)"
                   >
                     <Eye class="h-4 w-4" />
                   </Button>
@@ -220,9 +223,9 @@ function getTriggerBadge(triggerType: string) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    @click="emit('download', backup)"
                     :disabled="backup.backupStatus !== 'COMPLETED'"
                     title="Download Backup"
+                    @click="emit('download', backup)"
                   >
                     <Download class="h-4 w-4" />
                   </Button>
@@ -231,12 +234,12 @@ function getTriggerBadge(triggerType: string) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    @click="emit('pin-toggle', backup)"
                     :title="backup.isPinned ? 'Unpin Backup' : 'Pin Backup'"
+                    @click="emit('pin-toggle', backup)"
                   >
                     <component
                       :is="backup.isPinned ? PinOff : Pin"
-                      :class="['h-4 w-4', backup.isPinned && 'text-primary']"
+                      class="h-4 w-4" :class="[backup.isPinned && 'text-primary']"
                     />
                   </Button>
 
@@ -265,17 +268,17 @@ function getTriggerBadge(triggerType: string) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
-                        @click="emit('restore', backup)"
                         :disabled="backup.backupStatus !== 'COMPLETED'"
+                        @click="emit('restore', backup)"
                       >
                         <RotateCcw class="mr-2 h-4 w-4" />
                         Restore
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        @click="emit('delete', backup)"
                         class="text-destructive"
                         :disabled="backup.isPinned"
+                        @click="emit('delete', backup)"
                       >
                         <Trash2 class="mr-2 h-4 w-4" />
                         Delete

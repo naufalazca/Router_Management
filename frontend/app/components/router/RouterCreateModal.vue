@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
-import { useRouterStore, type CreateRouterInput } from '~/stores/router'
-import { useCompanyStore } from '~/stores/company'
+import type { CreateRouterInput } from '~/stores/router'
+import { onMounted, ref, watch } from 'vue'
+import { toast } from 'vue-sonner'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { toast } from 'vue-sonner'
+import { useCompanyStore } from '~/stores/company'
+import { useRouterStore } from '~/stores/router'
 
 const props = defineProps<{
   open: boolean
@@ -37,7 +38,7 @@ const formData = ref<CreateRouterInput>({
   username: 'admin',
   password: '',
   apiPort: 8728,
-  sshPort: 22
+  sshPort: 22,
 })
 
 // Load companies on mount
@@ -66,7 +67,7 @@ function resetForm() {
     username: 'admin',
     password: '',
     apiPort: 8728,
-    sshPort: 22
+    sshPort: 22,
   }
 }
 
@@ -85,12 +86,15 @@ async function handleSubmit() {
     if (result.success) {
       emit('success')
       emit('update:open', false)
-    } else {
+    }
+    else {
       toast.error(result.error || 'Failed to create router')
     }
-  } catch (error) {
+  }
+  catch (error) {
     toast.error('An unexpected error occurred')
-  } finally {
+  }
+  finally {
     isSubmitting.value = false
   }
 }
@@ -100,13 +104,15 @@ async function handleSubmit() {
   <Dialog :open="props.open" @update:open="(val) => emit('update:open', val)">
     <DialogContent class="sm:max-w-[500px] dialog-content">
       <DialogHeader>
-        <DialogTitle class="font-mono">Register New Device</DialogTitle>
+        <DialogTitle class="font-mono">
+          Register New Device
+        </DialogTitle>
         <DialogDescription class="font-mono text-xs">
           Configure network device parameters
         </DialogDescription>
       </DialogHeader>
 
-      <form @submit.prevent="handleSubmit" class="space-y-4 mt-4">
+      <form class="space-y-4 mt-4" @submit.prevent="handleSubmit">
         <div class="grid grid-cols-2 gap-4">
           <div class="col-span-2 space-y-2">
             <label class="text-sm font-medium font-mono">Device Name *</label>
@@ -161,7 +167,9 @@ async function handleSubmit() {
               v-model="formData.companyId"
               class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono"
             >
-              <option value="">No Company (Standalone)</option>
+              <option value="">
+                No Company (Standalone)
+              </option>
               <option
                 v-for="company in companyStore.companies"
                 :key="company.id"
@@ -178,14 +186,22 @@ async function handleSubmit() {
               v-model="formData.status"
               class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono"
             >
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-              <option value="MAINTENANCE">Maintenance</option>
+              <option value="ACTIVE">
+                Active
+              </option>
+              <option value="INACTIVE">
+                Inactive
+              </option>
+              <option value="MAINTENANCE">
+                Maintenance
+              </option>
             </select>
           </div>
 
           <div class="col-span-2 pt-2 border-t">
-            <h4 class="text-sm font-semibold font-mono mb-3 text-primary">RouterOS Credentials</h4>
+            <h4 class="text-sm font-semibold font-mono mb-3 text-primary">
+              RouterOS Credentials
+            </h4>
           </div>
 
           <div class="space-y-2">
@@ -234,8 +250,8 @@ async function handleSubmit() {
           <Button
             type="button"
             variant="outline"
-            @click="emit('update:open', false)"
             :disabled="isSubmitting"
+            @click="emit('update:open', false)"
           >
             Cancel
           </Button>

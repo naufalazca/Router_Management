@@ -67,30 +67,32 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
         const authStore = useAuthStore()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
-        const response = await $fetch<{ status: string; data: RouterOSUser[] }>(
+        const response = await $fetch<{ status: string, data: RouterOSUser[] }>(
           `${apiBase}/routeros/users/${routerId}`,
           {
             headers: {
               Authorization: `Bearer ${authStore.token}`,
             },
-          }
+          },
         )
 
         // Parse lastLoggedIn to Date objects
-        this.users = response.data.map((user) => ({
+        this.users = response.data.map(user => ({
           ...user,
           lastLoggedIn: user.lastLoggedIn ? new Date(user.lastLoggedIn) : undefined,
         }))
 
         return { success: true, data: this.users }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Fetch RouterOS users error:', error)
         this.error = error?.data?.message || 'Failed to fetch users'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -107,13 +109,13 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
         const authStore = useAuthStore()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
-        const response = await $fetch<{ status: string; data: RouterOSUser }>(
+        const response = await $fetch<{ status: string, data: RouterOSUser }>(
           `${apiBase}/routeros/users/${routerId}/${username}`,
           {
             headers: {
               Authorization: `Bearer ${authStore.token}`,
             },
-          }
+          },
         )
 
         this.currentUser = {
@@ -124,14 +126,16 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
         }
 
         return { success: true, data: this.currentUser }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Fetch RouterOS user error:', error)
         this.error = error?.data?.message || 'Failed to fetch user'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -171,14 +175,16 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
         this.users.push(newUser)
 
         return { success: true, data: newUser, message: response.message }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Create RouterOS user error:', error)
         this.error = error?.data?.message || 'Failed to create user'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -189,7 +195,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
     async updateUser(
       routerId: string,
       userId: string,
-      data: UpdateRouterOSUserInput
+      data: UpdateRouterOSUserInput,
     ) {
       this.isLoading = true
       this.error = null
@@ -219,7 +225,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
         }
 
         // Update in local state
-        const index = this.users.findIndex((u) => u.id === userId)
+        const index = this.users.findIndex(u => u.id === userId)
         if (index !== -1) {
           this.users[index] = updatedUser
         }
@@ -230,14 +236,16 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
         }
 
         return { success: true, data: updatedUser, message: response.message }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Update RouterOS user error:', error)
         this.error = error?.data?.message || 'Failed to update user'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -262,7 +270,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
         })
 
         // Remove from local state
-        this.users = this.users.filter((u) => u.id !== userId)
+        this.users = this.users.filter(u => u.id !== userId)
 
         // Clear current user if it's the one being deleted
         if (this.currentUser?.id === userId) {
@@ -270,14 +278,16 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
         }
 
         return { success: true }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Delete RouterOS user error:', error)
         this.error = error?.data?.message || 'Failed to delete user'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -313,20 +323,22 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
         }
 
         // Update in local state
-        const index = this.users.findIndex((u) => u.id === userId)
+        const index = this.users.findIndex(u => u.id === userId)
         if (index !== -1) {
           this.users[index] = updatedUser
         }
 
         return { success: true, data: updatedUser, message: response.message }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Enable RouterOS user error:', error)
         this.error = error?.data?.message || 'Failed to enable user'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -362,20 +374,22 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
         }
 
         // Update in local state
-        const index = this.users.findIndex((u) => u.id === userId)
+        const index = this.users.findIndex(u => u.id === userId)
         if (index !== -1) {
           this.users[index] = updatedUser
         }
 
         return { success: true, data: updatedUser, message: response.message }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Disable RouterOS user error:', error)
         this.error = error?.data?.message || 'Failed to disable user'
         return {
           success: false,
           error: this.error,
         }
-      } finally {
+      }
+      finally {
         this.isLoading = false
       }
     },
@@ -408,33 +422,33 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
     /**
      * Get active (enabled) users
      */
-    activeUsers: (state) => state.users.filter((u) => !u.disabled),
+    activeUsers: state => state.users.filter(u => !u.disabled),
 
     /**
      * Get disabled users
      */
-    disabledUsers: (state) => state.users.filter((u) => u.disabled),
+    disabledUsers: state => state.users.filter(u => u.disabled),
 
     /**
      * Get users by group
      */
-    getUsersByGroup: (state) => (group: string) =>
-      state.users.filter((u) => u.group === group),
+    getUsersByGroup: state => (group: string) =>
+      state.users.filter(u => u.group === group),
 
     /**
      * Total user count
      */
-    userCount: (state) => state.users.length,
+    userCount: state => state.users.length,
 
     /**
      * Get user by ID
      */
-    getUserById: (state) => (id: string) => state.users.find((u) => u.id === id),
+    getUserById: state => (id: string) => state.users.find(u => u.id === id),
 
     /**
      * Get user by name
      */
-    getUserByName: (state) => (name: string) =>
-      state.users.find((u) => u.name === name),
+    getUserByName: state => (name: string) =>
+      state.users.find(u => u.name === name),
   },
 })

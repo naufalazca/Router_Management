@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useBackupStore } from '~/stores/routeros/backup'
 import type { RouterBackup } from '~/types/backup'
+import { AlertTriangle, Pin } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { Button } from '~/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '~/components/ui/dialog'
-import { Button } from '~/components/ui/button'
-import { AlertTriangle, Pin } from 'lucide-vue-next'
+import { useBackupStore } from '~/stores/routeros/backup'
 
 const props = defineProps<{
   open: boolean
@@ -33,9 +33,11 @@ async function handleDelete() {
   try {
     await backupStore.deleteBackup(props.backup.id)
     emit('success')
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Failed to delete backup:', error)
-  } finally {
+  }
+  finally {
     isDeleting.value = false
   }
 }
@@ -52,11 +54,12 @@ function formatDate(dateString: string) {
 
 // Format file size
 function formatFileSize(bytes: number) {
-  if (bytes === 0) return '0 B'
+  if (bytes === 0)
+    return '0 B'
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
+  return `${(bytes / k ** i).toFixed(2)} ${sizes[i]}`
 }
 </script>
 
@@ -147,15 +150,15 @@ function formatFileSize(bytes: number) {
       <DialogFooter>
         <Button
           variant="outline"
-          @click="handleOpenChange(false)"
           :disabled="isDeleting"
+          @click="handleOpenChange(false)"
         >
           Cancel
         </Button>
         <Button
           variant="destructive"
-          @click="handleDelete"
           :disabled="isDeleting || backup.isPinned"
+          @click="handleDelete"
         >
           <span v-if="isDeleting">Deleting...</span>
           <span v-else>Delete Backup</span>

@@ -1,18 +1,19 @@
 <script setup lang="ts">
+import type { Company, UpdateCompanyInput } from '~/stores/company'
 import { ref, watch } from 'vue'
-import { useCompanyStore, type UpdateCompanyInput, type Company } from '~/stores/company'
+import { toast } from 'vue-sonner'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { toast } from 'vue-sonner'
+import { Textarea } from '@/components/ui/textarea'
+import { useCompanyStore } from '~/stores/company'
 
 const props = defineProps<{
   open: boolean
@@ -34,7 +35,7 @@ const formData = ref<UpdateCompanyInput>({
   description: '',
   logo: '',
   masterUsername: '',
-  masterPassword: ''
+  masterPassword: '',
 })
 
 // Pre-fill form when company changes or dialog opens
@@ -47,7 +48,7 @@ watch([() => props.open, () => props.company], ([newOpen, newCompany]) => {
       description: newCompany.description || '',
       logo: newCompany.logo || '',
       masterUsername: newCompany.masterUsername,
-      masterPassword: '' // Don't pre-fill password for security
+      masterPassword: '', // Don't pre-fill password for security
     }
   }
 })
@@ -67,16 +68,17 @@ function resetForm() {
     description: '',
     logo: '',
     masterUsername: '',
-    masterPassword: ''
+    masterPassword: '',
   }
 }
 
 async function handleSubmit() {
-  if (!props.company) return
+  if (!props.company)
+    return
 
   // Validation
-  if (!formData.value.name || !formData.value.code || !formData.value.address ||
-      !formData.value.masterUsername) {
+  if (!formData.value.name || !formData.value.code || !formData.value.address
+    || !formData.value.masterUsername) {
     toast.error('Please fill in all required fields')
     return
   }
@@ -105,12 +107,15 @@ async function handleSubmit() {
       toast.success('Company updated successfully')
       emit('success')
       emit('update:open', false)
-    } else {
+    }
+    else {
       toast.error(result.error || 'Failed to update company')
     }
-  } catch (error) {
+  }
+  catch (error) {
     toast.error('An unexpected error occurred')
-  } finally {
+  }
+  finally {
     isSubmitting.value = false
   }
 }
@@ -120,13 +125,15 @@ async function handleSubmit() {
   <Dialog :open="props.open" @update:open="(val) => emit('update:open', val)">
     <DialogContent class="sm:max-w-[600px]">
       <DialogHeader>
-        <DialogTitle class="font-mono">Edit Company</DialogTitle>
+        <DialogTitle class="font-mono">
+          Edit Company
+        </DialogTitle>
         <DialogDescription class="font-mono text-xs">
           Update company information and credentials
         </DialogDescription>
       </DialogHeader>
 
-      <form @submit.prevent="handleSubmit" class="space-y-4 mt-4">
+      <form class="space-y-4 mt-4" @submit.prevent="handleSubmit">
         <div class="grid grid-cols-2 gap-4">
           <!-- Company Name -->
           <div class="col-span-2 space-y-2">
@@ -149,7 +156,9 @@ async function handleSubmit() {
               class="font-mono uppercase"
               @input="(e: any) => formData.code = e.target.value.toUpperCase()"
             />
-            <p class="text-xs text-muted-foreground font-mono">Uppercase letters, numbers, hyphens, underscores</p>
+            <p class="text-xs text-muted-foreground font-mono">
+              Uppercase letters, numbers, hyphens, underscores
+            </p>
           </div>
 
           <!-- Master Username -->
@@ -172,7 +181,9 @@ async function handleSubmit() {
               placeholder="Leave blank to keep current password"
               class="font-mono"
             />
-            <p class="text-xs text-muted-foreground font-mono">Only enter a new password if you want to change it</p>
+            <p class="text-xs text-muted-foreground font-mono">
+              Only enter a new password if you want to change it
+            </p>
           </div>
 
           <!-- Address -->
@@ -214,8 +225,8 @@ async function handleSubmit() {
           <Button
             type="button"
             variant="outline"
-            @click="emit('update:open', false)"
             :disabled="isSubmitting"
+            @click="emit('update:open', false)"
           >
             Cancel
           </Button>

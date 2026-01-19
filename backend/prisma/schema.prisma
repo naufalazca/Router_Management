@@ -59,6 +59,38 @@ enum RestoreType {
   PARTIAL         // Restore specific sections (future)
 }
 
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskActivityAction {
+  CREATED
+  UPDATED
+  MOVED
+  ARCHIVED
+  RESTORED
+  COMMENTED
+  ATTACHMENT_ADDED
+  ATTACHMENT_REMOVED
+  LABEL_ADDED
+  LABEL_REMOVED
+  DUE_DATE_CHANGED
+  PRIORITY_CHANGED
+  DESCRIPTION_CHANGED
+  TITLE_CHANGED
+  TIME_ENTRY_ADDED
+  TIME_ENTRY_UPDATED
+  TIME_ENTRY_DELETED
+}
+
+enum TimeEntryType {
+  TIMER           // Start/stop timer
+  MANUAL          // Manual input
+}
+
 // ==========================================
 // ROUTER MANAGEMENT
 // ==========================================
@@ -84,6 +116,7 @@ model Router {
   backups         RouterBackup[]
   backupSchedules BackupSchedule[]
   restoreHistory  BackupRestore[]
+  tasks           Task[]  // Kanban tasks linked to this router
 
   @@map("routers")
 }
@@ -124,6 +157,14 @@ model User {
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Kanban Relations
+  boards              Board[]
+  createdTasks        Task[]              @relation("TaskCreator")
+  taskComments        TaskComment[]
+  taskActivities      TaskActivity[]
+  taskAttachments     TaskAttachment[]
+  taskTimeEntries     TaskTimeEntry[]
 
   @@map("users")
 }
@@ -237,4 +278,225 @@ model BackupRestore {
   @@index([backupId])
   @@index([routerId])
   @@index([createdAt])
+}
+
+// ==========================================
+// KANBAN TO-DO LIST (PERSONAL)
+// ==========================================
+
+model Board {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+
+  name        String
+  description String?
+  color       String?  // Hex color untuk visual
+  icon        String?  // Emoji atau icon name
+  position    Int      // Urutan board (untuk sorting)
+  isArchived  Boolean  @default(false) @map("is_archived")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lists       BoardList[]
+  labels      Label[]
+
+  @@map("boards")
+  @@index([userId])
+  @@index([userId, position])
+}
+
+model BoardList {
+  id         String   @id @default(uuid())
+  boardId    String   @map("board_id")
+
+  name       String
+  position   Int      // Urutan kolom
+  color      String?  // Optional color untuk kolom
+  isArchived Boolean  @default(false) @map("is_archived")
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  board      Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks      Task[]
+
+  @@map("board_lists")
+  @@index([boardId, position])
+}
+
+model Task {
+  id             String        @id @default(uuid())
+  listId         String        @map("list_id")
+  createdBy      String        @map("created_by")
+
+  title          String
+  description    String?       @db.Text  // Support markdown
+  position       Int           // Urutan dalam list
+  priority       TaskPriority  @default(MEDIUM)
+
+  // Dates
+  dueDate        DateTime?     @map("due_date")
+  startDate      DateTime?     @map("start_date")
+  completedAt    DateTime?     @map("completed_at")
+
+  // Time Tracking
+  estimatedHours Decimal?      @map("estimated_hours") @db.Decimal(10, 2)
+
+  // Router Integration (Optional)
+  routerId       String?       @map("router_id")
+
+  isArchived     Boolean       @default(false) @map("is_archived")
+
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  list           BoardList     @relation(fields: [listId], references: [id], onDelete: Cascade)
+  creator        User          @relation("TaskCreator", fields: [createdBy], references: [id])
+  router         Router?       @relation(fields: [routerId], references: [id], onDelete: SetNull)
+
+  taskLabels     TaskLabel[]
+  comments       TaskComment[]
+  attachments    TaskAttachment[]
+  activities     TaskActivity[]
+  timeEntries    TaskTimeEntry[]
+
+  @@map("tasks")
+  @@index([listId, position])
+  @@index([createdBy])
+  @@index([routerId])
+  @@index([dueDate])
+}
+
+model Label {
+  id         String   @id @default(uuid())
+  boardId    String   @map("board_id")
+
+  name       String
+  color      String   // Hex color
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  board      Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  taskLabels TaskLabel[]
+
+  @@map("labels")
+  @@unique([boardId, name]) // Prevent duplicate label names in same board
+  @@index([boardId])
+}
+
+model TaskLabel {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  labelId   String   @map("label_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label     Label    @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@map("task_labels")
+  @@unique([taskId, labelId]) // Prevent duplicate labels on same task
+  @@index([taskId])
+  @@index([labelId])
+}
+
+model TaskAttachment {
+  id          String   @id @default(uuid())
+  taskId      String   @map("task_id")
+  uploadedBy  String   @map("uploaded_by")
+
+  // File Information
+  fileName    String   @map("file_name")
+  fileSize    BigInt   @map("file_size")      // Bytes
+  mimeType    String   @map("mime_type")      // image/png, application/pdf, etc
+
+  // R2 Storage
+  storageKey  String   @map("storage_key")    // R2 path: kanban/{taskId}/{timestamp}_{filename}
+  checksum    String                          // SHA256 hash untuk integrity
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploader    User     @relation(fields: [uploadedBy], references: [id])
+
+  @@map("task_attachments")
+  @@index([taskId])
+  @@index([uploadedBy])
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  userId    String   @map("user_id")
+
+  content   String   @db.Text  // Markdown format
+
+  isEdited  Boolean  @default(false) @map("is_edited")
+  editedAt  DateTime? @map("edited_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("task_comments")
+  @@index([taskId])
+  @@index([userId])
+}
+
+model TaskActivity {
+  id           String              @id @default(uuid())
+  taskId       String              @map("task_id")
+  userId       String              @map("user_id")
+
+  action       TaskActivityAction
+
+  // Field change tracking
+  fieldChanged String?             @map("field_changed")  // "title", "dueDate", "priority", etc
+  oldValue     Json?               @map("old_value")
+  newValue     Json?               @map("new_value")
+
+  // Additional context
+  metadata     Json?               // Extra data: { listName: "Done", fromList: "In Progress" }
+
+  createdAt    DateTime            @default(now()) @map("created_at")
+
+  task         Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user         User                @relation(fields: [userId], references: [id])
+
+  @@map("task_activities")
+  @@index([taskId, createdAt])
+  @@index([userId])
+}
+
+model TaskTimeEntry {
+  id          String         @id @default(uuid())
+  taskId      String         @map("task_id")
+  userId      String         @map("user_id")
+
+  entryType   TimeEntryType  @default(TIMER) @map("entry_type")
+
+  // Timer-based
+  startTime   DateTime?      @map("start_time")
+  endTime     DateTime?      @map("end_time")      // Null if timer still running
+
+  // Duration (calculated for timer, manual input for manual)
+  duration    Int            // In seconds
+
+  description String?        @db.Text  // Catatan apa yang dikerjakan
+
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  task        Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User           @relation(fields: [userId], references: [id])
+
+  @@map("task_time_entries")
+  @@index([taskId])
+  @@index([userId])
+  @@index([startTime])
 }

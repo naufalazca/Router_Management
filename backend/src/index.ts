@@ -8,6 +8,13 @@ import routes from './routes';
 import { prisma } from './lib/prisma';
 import { Server } from 'http';
 
+// Global BigInt serialization fix for JSON.stringify
+// This converts BigInt to Number when serializing to JSON
+// @ts-ignore
+BigInt.prototype.toJSON = function() {
+  return Number(this);
+};
+
 const app: Application = express();
 
 // Trust proxy - Required when behind reverse proxy (nginx, load balancer, etc.)

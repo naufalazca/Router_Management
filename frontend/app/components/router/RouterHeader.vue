@@ -36,12 +36,12 @@ const emit = defineEmits<{
         <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           :model-value="searchQuery"
-          @update:model-value="emit('update:searchQuery', $event)"
           placeholder="Search devices..."
           class="pl-9"
+          @update:model-value="emit('update:searchQuery', $event)"
         />
       </div>
-      <Button @click="emit('openCreateDialog')" class="gap-2">
+      <Button class="gap-2" @click="emit('openCreateDialog')">
         <Plus class="h-4 w-4" />
         <span class="hidden sm:inline">Add Device</span>
       </Button>

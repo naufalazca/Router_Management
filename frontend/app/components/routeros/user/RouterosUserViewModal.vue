@@ -1,25 +1,25 @@
 <script setup lang="ts">
-import { type RouterOSUser } from '~/stores/routeros/user'
+import type { RouterOSUser } from '~/stores/routeros/user'
+import {
+  CheckCircle2,
+  Clock,
+  FileText,
+  Key,
+  MapPin,
+  Shield,
+  User,
+  XCircle,
+} from 'lucide-vue-next'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import {
-  User,
-  Key,
-  Shield,
-  MapPin,
-  FileText,
-  Clock,
-  CheckCircle2,
-  XCircle
-} from 'lucide-vue-next'
 
 const props = defineProps<{
   open: boolean
@@ -31,13 +31,14 @@ const emit = defineEmits<{
 }>()
 
 function formatDate(date: Date | undefined) {
-  if (!date) return 'Never'
+  if (!date)
+    return 'Never'
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   }).format(date)
 }
 </script>
@@ -46,7 +47,9 @@ function formatDate(date: Date | undefined) {
   <Dialog :open="props.open" @update:open="(val) => emit('update:open', val)">
     <DialogContent class="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle class="font-mono">RouterOS User Details</DialogTitle>
+        <DialogTitle class="font-mono">
+          RouterOS User Details
+        </DialogTitle>
         <DialogDescription class="font-mono text-xs">
           View user account information
         </DialogDescription>
@@ -82,7 +85,9 @@ function formatDate(date: Date | undefined) {
                   <User class="h-3 w-3" />
                   Username
                 </div>
-                <p class="font-mono text-sm font-medium">{{ props.user.name }}</p>
+                <p class="font-mono text-sm font-medium">
+                  {{ props.user.name }}
+                </p>
               </div>
 
               <!-- User ID -->
@@ -91,7 +96,9 @@ function formatDate(date: Date | undefined) {
                   <Key class="h-3 w-3" />
                   User ID
                 </div>
-                <p class="font-mono text-sm text-cyan-400">{{ props.user.id }}</p>
+                <p class="font-mono text-sm text-cyan-400">
+                  {{ props.user.id }}
+                </p>
               </div>
 
               <!-- Group -->
@@ -111,7 +118,9 @@ function formatDate(date: Date | undefined) {
                   <MapPin class="h-3 w-3" />
                   Allowed IP Address
                 </div>
-                <p class="font-mono text-sm">{{ props.user.address || '0.0.0.0/0 (Any)' }}</p>
+                <p class="font-mono text-sm">
+                  {{ props.user.address || '0.0.0.0/0 (Any)' }}
+                </p>
               </div>
 
               <!-- Last Login -->
@@ -120,7 +129,9 @@ function formatDate(date: Date | undefined) {
                   <Clock class="h-3 w-3" />
                   Last Logged In
                 </div>
-                <p class="font-mono text-sm text-muted-foreground">{{ formatDate(props.user.lastLoggedIn) }}</p>
+                <p class="font-mono text-sm text-muted-foreground">
+                  {{ formatDate(props.user.lastLoggedIn) }}
+                </p>
               </div>
 
               <!-- Comment -->
@@ -129,7 +140,9 @@ function formatDate(date: Date | undefined) {
                   <FileText class="h-3 w-3" />
                   Comment
                 </div>
-                <p class="font-mono text-sm text-muted-foreground">{{ props.user.comment }}</p>
+                <p class="font-mono text-sm text-muted-foreground">
+                  {{ props.user.comment }}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -151,7 +164,9 @@ function formatDate(date: Date | undefined) {
                   <Key class="h-3 w-3" />
                   Password
                 </div>
-                <p class="font-mono text-sm text-muted-foreground">••••••••••••</p>
+                <p class="font-mono text-sm text-muted-foreground">
+                  ••••••••••••
+                </p>
               </div>
 
               <!-- Status -->
@@ -200,8 +215,8 @@ function formatDate(date: Date | undefined) {
                     props.user.group === 'full'
                       ? 'Full administrative access to all router features'
                       : props.user.group === 'read'
-                      ? 'Read-only access to router configuration'
-                      : 'Read and write access to router configuration'
+                        ? 'Read-only access to router configuration'
+                        : 'Read and write access to router configuration'
                   }}
                 </p>
               </div>

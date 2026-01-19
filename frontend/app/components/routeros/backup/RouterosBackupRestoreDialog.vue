@@ -1,27 +1,27 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useBackupStore } from '~/stores/routeros/backup'
-import type { RouterBackup } from '~/types/backup'
 import type { Router } from '~/stores/router'
+import type { RouterBackup } from '~/types/backup'
+import { AlertTriangle } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { Button } from '~/components/ui/button'
+import { Checkbox } from '~/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '~/components/ui/dialog'
-import { Button } from '~/components/ui/button'
 import { Label } from '~/components/ui/label'
-import { Checkbox } from '~/components/ui/checkbox'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from '~/components/ui/select'
-import { AlertTriangle } from 'lucide-vue-next'
+import { useBackupStore } from '~/stores/routeros/backup'
 
 const props = defineProps<{
   open: boolean
@@ -52,13 +52,15 @@ async function handleSubmit() {
   try {
     await backupStore.restoreBackup(props.backup.id, {
       routerId: selectedRouterId.value,
-      createSafetyBackup: createSafetyBackup.value
+      createSafetyBackup: createSafetyBackup.value,
     })
 
     emit('success')
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Failed to restore backup:', error)
-  } finally {
+  }
+  finally {
     isSubmitting.value = false
   }
 }
@@ -167,15 +169,15 @@ function handleOpenChange(value: boolean) {
       <DialogFooter>
         <Button
           variant="outline"
-          @click="handleOpenChange(false)"
           :disabled="isSubmitting"
+          @click="handleOpenChange(false)"
         >
           Cancel
         </Button>
         <Button
           variant="destructive"
-          @click="handleSubmit"
           :disabled="!selectedRouterId || isSubmitting"
+          @click="handleSubmit"
         >
           <span v-if="isSubmitting">Restoring...</span>
           <span v-else>Restore Configuration</span>

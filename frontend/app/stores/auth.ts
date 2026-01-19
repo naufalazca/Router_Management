@@ -64,7 +64,8 @@ export const useAuthStore = defineStore('auth', {
             this.user = user
             this.token = token
             this.isAuthenticated = true
-          } catch (error) {
+          }
+          catch (error) {
             console.error('Failed to parse stored auth data:', error)
             this.clearAuth()
           }
@@ -79,18 +80,19 @@ export const useAuthStore = defineStore('auth', {
         const config = useRuntimeConfig()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
-        const response = await $fetch<{ success: boolean; data: { token: string; user: User } }>(`${apiBase}/users/login`, {
+        const response = await $fetch<{ success: boolean, data: { token: string, user: User } }>(`${apiBase}/users/login`, {
           method: 'POST',
           body: { username, password },
         })
 
         this.setAuth(response.data.user, response.data.token)
         return { success: true }
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.error('Login error:', error)
         return {
           success: false,
-          error: error?.data?.message || 'Login failed. Please check your credentials.'
+          error: error?.data?.message || 'Login failed. Please check your credentials.',
         }
       }
     },
@@ -102,8 +104,8 @@ export const useAuthStore = defineStore('auth', {
   },
 
   getters: {
-    isAdmin: (state) => state.user?.role === 'ADMIN',
-    isUser: (state) => state.user?.role === 'USER',
-    isViewer: (state) => state.user?.role === 'VIEWER',
+    isAdmin: state => state.user?.role === 'ADMIN',
+    isUser: state => state.user?.role === 'USER',
+    isViewer: state => state.user?.role === 'VIEWER',
   },
 })

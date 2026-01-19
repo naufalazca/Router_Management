@@ -1,34 +1,26 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRouterOSUserStore, type RouterOSUser } from '~/stores/routeros/user'
-import { useRouterStore } from '~/stores/router'
+import type { RouterOSUser } from '~/stores/routeros/user'
 import {
-  Plus,
-  Search,
-  User,
-  Users,
-  Shield,
-  Server,
   CheckCircle2,
-  XCircle,
   Eye,
   Pencil,
-  Trash2,
+  Plus,
   Power,
-  PowerOff
+  PowerOff,
+  Search,
+  Server,
+  Shield,
+  Trash2,
+  User,
+  Users,
+  XCircle,
 } from 'lucide-vue-next'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { computed, onMounted, ref, watch } from 'vue'
+import { toast } from 'vue-sonner'
 import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -37,11 +29,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { toast } from 'vue-sonner'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import RouterosDeleteDialog from '~/components/routeros/user/RouterosDeleteDialog.vue'
 import RouterosUserCreateModal from '~/components/routeros/user/RouterosUserCreateModal.vue'
 import RouterosUserEditModal from '~/components/routeros/user/RouterosUserEditModal.vue'
 import RouterosUserViewModal from '~/components/routeros/user/RouterosUserViewModal.vue'
-import RouterosDeleteDialog from '~/components/routeros/user/RouterosDeleteDialog.vue'
+import { useRouterStore } from '~/stores/router'
+import { useRouterOSUserStore } from '~/stores/routeros/user'
 
 const routerosUserStore = useRouterOSUserStore()
 const routerStore = useRouterStore()
@@ -69,7 +70,8 @@ onMounted(async () => {
 watch(selectedRouterId, async (newRouterId) => {
   if (newRouterId) {
     await routerosUserStore.fetchUsers(newRouterId)
-  } else {
+  }
+  else {
     routerosUserStore.clearUsers()
   }
 })
@@ -81,26 +83,28 @@ const selectedRouter = computed(() => {
 
 // Filtered users based on search
 const filteredUsers = computed(() => {
-  if (!searchQuery.value) return routerosUserStore.users
+  if (!searchQuery.value)
+    return routerosUserStore.users
 
   const query = searchQuery.value.toLowerCase()
   return routerosUserStore.users.filter(user =>
-    user.name.toLowerCase().includes(query) ||
-    user.group.toLowerCase().includes(query) ||
-    user.address?.toLowerCase().includes(query) ||
-    user.comment?.toLowerCase().includes(query)
+    user.name.toLowerCase().includes(query)
+    || user.group.toLowerCase().includes(query)
+    || user.address?.toLowerCase().includes(query)
+    || user.comment?.toLowerCase().includes(query),
   )
 })
 
 // Format date
 function formatDate(date: Date | undefined) {
-  if (!date) return 'Never'
+  if (!date)
+    return 'Never'
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   }).format(date)
 }
 
@@ -133,7 +137,8 @@ function openDeleteDialog(user: RouterOSUser) {
 
 // Handle enable/disable user
 async function handleToggleUserStatus(user: RouterOSUser) {
-  if (!selectedRouterId.value) return
+  if (!selectedRouterId.value)
+    return
 
   const action = user.disabled ? 'enable' : 'disable'
   const result = user.disabled
@@ -142,7 +147,8 @@ async function handleToggleUserStatus(user: RouterOSUser) {
 
   if (result.success) {
     toast.success(result.message || `User ${action}d successfully`)
-  } else {
+  }
+  else {
     toast.error(result.error || `Failed to ${action} user`)
   }
 }
@@ -207,7 +213,7 @@ const stats = computed(() => ({
             :disabled="!selectedRouterId"
           />
         </div>
-        <Button @click="openCreateModal" class="gap-2" :disabled="!selectedRouterId">
+        <Button class="gap-2" :disabled="!selectedRouterId" @click="openCreateModal">
           <Plus class="h-4 w-4" />
           <span class="hidden sm:inline">Add User</span>
         </Button>
@@ -261,13 +267,17 @@ const stats = computed(() => ({
     </Card>
 
     <!-- Stats Cards -->
-    <div class="grid gap-4 md:grid-cols-3" v-if="selectedRouterId">
+    <div v-if="selectedRouterId" class="grid gap-4 md:grid-cols-3">
       <Card>
         <CardContent class="pt-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs text-muted-foreground uppercase tracking-wider">Total Users</p>
-              <p class="text-3xl font-bold tabular-nums mt-1">{{ stats.total }}</p>
+              <p class="text-xs text-muted-foreground uppercase tracking-wider">
+                Total Users
+              </p>
+              <p class="text-3xl font-bold tabular-nums mt-1">
+                {{ stats.total }}
+              </p>
             </div>
             <Users class="h-8 w-8 text-muted-foreground/50" />
           </div>
@@ -278,8 +288,12 @@ const stats = computed(() => ({
         <CardContent class="pt-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Active Users</p>
-              <p class="text-3xl font-bold tabular-nums mt-1 text-emerald-600 dark:text-emerald-400">{{ stats.active }}</p>
+              <p class="text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                Active Users
+              </p>
+              <p class="text-3xl font-bold tabular-nums mt-1 text-emerald-600 dark:text-emerald-400">
+                {{ stats.active }}
+              </p>
             </div>
             <CheckCircle2 class="h-8 w-8 text-emerald-600/50 dark:text-emerald-400/50" />
           </div>
@@ -290,8 +304,12 @@ const stats = computed(() => ({
         <CardContent class="pt-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs text-muted-foreground uppercase tracking-wider">Disabled Users</p>
-              <p class="text-3xl font-bold tabular-nums mt-1 text-muted-foreground">{{ stats.disabled }}</p>
+              <p class="text-xs text-muted-foreground uppercase tracking-wider">
+                Disabled Users
+              </p>
+              <p class="text-3xl font-bold tabular-nums mt-1 text-muted-foreground">
+                {{ stats.disabled }}
+              </p>
             </div>
             <XCircle class="h-8 w-8 text-muted-foreground/50" />
           </div>
@@ -316,7 +334,7 @@ const stats = computed(() => ({
         </div>
 
         <div v-else-if="routerosUserStore.isLoading" class="flex items-center justify-center py-12">
-          <div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+          <div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
         </div>
 
         <div v-else-if="filteredUsers.length === 0" class="flex flex-col items-center justify-center gap-4 py-12">
@@ -334,7 +352,9 @@ const stats = computed(() => ({
               <TableHead>IP Address</TableHead>
               <TableHead>Last Login</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead class="text-right">Actions</TableHead>
+              <TableHead class="text-right">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -348,7 +368,9 @@ const stats = computed(() => ({
                     <User class="h-3 w-3 text-primary" />
                   </div>
                   <div>
-                    <p class="font-semibold">{{ user.name }}</p>
+                    <p class="font-semibold">
+                      {{ user.name }}
+                    </p>
                     <p v-if="user.comment" class="text-xs text-muted-foreground truncate max-w-[200px]">
                       {{ user.comment }}
                     </p>
@@ -392,34 +414,34 @@ const stats = computed(() => ({
                   <Button
                     variant="ghost"
                     size="icon"
-                    @click="openViewModal(user)"
                     title="View Details"
+                    @click="openViewModal(user)"
                   >
                     <Eye class="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    @click="openEditModal(user)"
                     title="Edit"
+                    @click="openEditModal(user)"
                   >
                     <Pencil class="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    @click="handleToggleUserStatus(user)"
                     :class="!user.disabled ? 'text-amber-600 hover:text-amber-600' : 'text-emerald-600 hover:text-emerald-600'"
                     :title="user.disabled ? 'Enable User' : 'Disable User'"
+                    @click="handleToggleUserStatus(user)"
                   >
                     <component :is="user.disabled ? Power : PowerOff" class="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    @click="openDeleteDialog(user)"
                     title="Delete"
                     class="text-destructive hover:text-destructive"
+                    @click="openDeleteDialog(user)"
                   >
                     <Trash2 class="h-4 w-4" />
                   </Button>

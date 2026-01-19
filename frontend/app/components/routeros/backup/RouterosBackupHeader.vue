@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { Plus, RefreshCw, Search } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
-import { RefreshCw, Plus, Search } from 'lucide-vue-next'
 
 defineProps<{
   searchQuery: string
@@ -29,7 +29,9 @@ async function handleRefresh() {
   <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
     <!-- Title & Description -->
     <div>
-      <h1 class="text-3xl font-bold tracking-tight">Router Backups</h1>
+      <h1 class="text-3xl font-bold tracking-tight">
+        Router Backups
+      </h1>
       <p class="text-muted-foreground mt-1">
         Manage and restore router configuration backups
       </p>
@@ -53,10 +55,10 @@ async function handleRefresh() {
       <Button
         variant="outline"
         size="icon"
-        @click="handleRefresh"
         :disabled="isRefreshing"
+        @click="handleRefresh"
       >
-        <RefreshCw :class="['h-4 w-4', isRefreshing && 'animate-spin']" />
+        <RefreshCw class="h-4 w-4" :class="[isRefreshing && 'animate-spin']" />
       </Button>
 
       <!-- Generate Backup Button -->

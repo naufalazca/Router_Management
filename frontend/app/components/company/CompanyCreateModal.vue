@@ -1,18 +1,19 @@
 <script setup lang="ts">
+import type { CreateCompanyInput } from '~/stores/company'
 import { ref, watch } from 'vue'
-import { useCompanyStore, type CreateCompanyInput } from '~/stores/company'
+import { toast } from 'vue-sonner'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { toast } from 'vue-sonner'
+import { Textarea } from '@/components/ui/textarea'
+import { useCompanyStore } from '~/stores/company'
 
 const props = defineProps<{
   open: boolean
@@ -33,7 +34,7 @@ const formData = ref<CreateCompanyInput>({
   description: '',
   logo: '',
   masterUsername: '',
-  masterPassword: ''
+  masterPassword: '',
 })
 
 // Reset form when dialog closes
@@ -51,14 +52,14 @@ function resetForm() {
     description: '',
     logo: '',
     masterUsername: '',
-    masterPassword: ''
+    masterPassword: '',
   }
 }
 
 async function handleSubmit() {
   // Validation
-  if (!formData.value.name || !formData.value.code || !formData.value.address ||
-      !formData.value.masterUsername || !formData.value.masterPassword) {
+  if (!formData.value.name || !formData.value.code || !formData.value.address
+    || !formData.value.masterUsername || !formData.value.masterPassword) {
     toast.error('Please fill in all required fields')
     return
   }
@@ -71,12 +72,15 @@ async function handleSubmit() {
     if (result.success) {
       emit('success')
       emit('update:open', false)
-    } else {
+    }
+    else {
       toast.error(result.error || 'Failed to create company')
     }
-  } catch (error) {
+  }
+  catch (error) {
     toast.error('An unexpected error occurred')
-  } finally {
+  }
+  finally {
     isSubmitting.value = false
   }
 }
@@ -86,13 +90,15 @@ async function handleSubmit() {
   <Dialog :open="props.open" @update:open="(val) => emit('update:open', val)">
     <DialogContent class="sm:max-w-[600px]">
       <DialogHeader>
-        <DialogTitle class="font-mono">Create New Company</DialogTitle>
+        <DialogTitle class="font-mono">
+          Create New Company
+        </DialogTitle>
         <DialogDescription class="font-mono text-xs">
           Register a new company with master credentials for router management
         </DialogDescription>
       </DialogHeader>
 
-      <form @submit.prevent="handleSubmit" class="space-y-4 mt-4">
+      <form class="space-y-4 mt-4" @submit.prevent="handleSubmit">
         <div class="grid grid-cols-2 gap-4">
           <!-- Company Name -->
           <div class="col-span-2 space-y-2">
@@ -115,7 +121,9 @@ async function handleSubmit() {
               class="font-mono uppercase"
               @input="(e: any) => formData.code = e.target.value.toUpperCase()"
             />
-            <p class="text-xs text-muted-foreground font-mono">Uppercase letters, numbers, hyphens, underscores</p>
+            <p class="text-xs text-muted-foreground font-mono">
+              Uppercase letters, numbers, hyphens, underscores
+            </p>
           </div>
 
           <!-- Master Username -->
@@ -139,7 +147,9 @@ async function handleSubmit() {
               required
               class="font-mono"
             />
-            <p class="text-xs text-muted-foreground font-mono">Default credentials for all routers in this company</p>
+            <p class="text-xs text-muted-foreground font-mono">
+              Default credentials for all routers in this company
+            </p>
           </div>
 
           <!-- Address -->
@@ -181,8 +191,8 @@ async function handleSubmit() {
           <Button
             type="button"
             variant="outline"
-            @click="emit('update:open', false)"
             :disabled="isSubmitting"
+            @click="emit('update:open', false)"
           >
             Cancel
           </Button>

@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import type { Router } from '~/stores/router'
+import { AlertTriangle } from 'lucide-vue-next'
 import { ref } from 'vue'
-import { useRouterStore, type Router } from '~/stores/router'
+import { toast } from 'vue-sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,8 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { AlertTriangle } from 'lucide-vue-next'
-import { toast } from 'vue-sonner'
+import { useRouterStore } from '~/stores/router'
 
 const props = defineProps<{
   open: boolean
@@ -28,7 +29,8 @@ const routerStore = useRouterStore()
 const isDeleting = ref(false)
 
 async function handleDelete() {
-  if (!props.router) return
+  if (!props.router)
+    return
 
   isDeleting.value = true
 
@@ -39,12 +41,15 @@ async function handleDelete() {
       toast.success(`Device "${props.router.name}" deleted successfully`)
       emit('success')
       emit('update:open', false)
-    } else {
+    }
+    else {
       toast.error(result.error || 'Failed to delete device')
     }
-  } catch (error) {
+  }
+  catch (error) {
     toast.error('An unexpected error occurred')
-  } finally {
+  }
+  finally {
     isDeleting.value = false
   }
 }
@@ -65,7 +70,9 @@ function handleCancel() {
             <AlertTriangle class="h-6 w-6 text-destructive" />
           </div>
           <div class="flex-1">
-            <AlertDialogTitle class="font-mono text-lg">Delete Device</AlertDialogTitle>
+            <AlertDialogTitle class="font-mono text-lg">
+              Delete Device
+            </AlertDialogTitle>
             <AlertDialogDescription class="font-mono text-xs mt-1">
               This action cannot be undone
             </AlertDialogDescription>
@@ -120,16 +127,16 @@ function handleCancel() {
 
       <AlertDialogFooter>
         <AlertDialogCancel
-          @click="handleCancel"
           :disabled="isDeleting"
           class="font-mono"
+          @click="handleCancel"
         >
           Cancel
         </AlertDialogCancel>
         <AlertDialogAction
-          @click="handleDelete"
           :disabled="isDeleting"
           class="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-mono"
+          @click="handleDelete"
         >
           {{ isDeleting ? 'Deleting...' : 'Delete Device' }}
         </AlertDialogAction>

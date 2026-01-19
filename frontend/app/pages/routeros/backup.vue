@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useBackupStore } from '~/stores/routeros/backup'
-import { useRouterStore } from '~/stores/router'
+import type { BackupStatus, RouterBackup } from '~/types/backup'
+import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
-import { BackupStatus, type RouterBackup } from '~/types/backup'
-import RouterosBackupGenerateModal from '~/components/routeros/backup/RouterosBackupGenerateModal.vue'
-import RouterosBackupTable from '~/components/routeros/backup/RouterosBackupTable.vue'
-import RouterosBackupHeader from '~/components/routeros/backup/RouterosBackupHeader.vue'
-import RouterosBackupStats from '~/components/routeros/backup/RouterosBackupStats.vue'
-import RouterosBackupViewModal from '~/components/routeros/backup/RouterosBackupViewModal.vue'
-import RouterosBackupRestoreDialog from '~/components/routeros/backup/RouterosBackupRestoreDialog.vue'
 import RouterosBackupDeleteDialog from '~/components/routeros/backup/RouterosBackupDeleteDialog.vue'
+import RouterosBackupGenerateModal from '~/components/routeros/backup/RouterosBackupGenerateModal.vue'
+import RouterosBackupHeader from '~/components/routeros/backup/RouterosBackupHeader.vue'
+import RouterosBackupRestoreDialog from '~/components/routeros/backup/RouterosBackupRestoreDialog.vue'
+import RouterosBackupStats from '~/components/routeros/backup/RouterosBackupStats.vue'
+import RouterosBackupTable from '~/components/routeros/backup/RouterosBackupTable.vue'
+import RouterosBackupViewModal from '~/components/routeros/backup/RouterosBackupViewModal.vue'
+import { useRouterStore } from '~/stores/router'
+import { useBackupStore } from '~/stores/routeros/backup'
 
 const backupStore = useBackupStore()
 const routerStore = useRouterStore()
@@ -27,28 +27,28 @@ const selectedBackup = ref<RouterBackup | null>(null)
 onMounted(async () => {
   await Promise.all([
     backupStore.fetchBackups({ limit: 50, offset: 0 }),
-    routerStore.fetchRouters()
+    routerStore.fetchRouters(),
   ])
 })
 
 // Update search query in store
-const handleSearchChange = (value: string) => {
+function handleSearchChange(value: string) {
   searchQuery.value = value
   backupStore.setFilters({ searchQuery: value })
 }
 
 // Filter by status
-const handleStatusFilter = (status: BackupStatus | null) => {
+function handleStatusFilter(status: BackupStatus | null) {
   backupStore.setFilters({ status })
 }
 
 // Filter by pinned
-const handlePinnedFilter = (isPinned: boolean | null) => {
+function handlePinnedFilter(isPinned: boolean | null) {
   backupStore.setFilters({ isPinned })
 }
 
 // Filter by router
-const handleRouterFilter = (routerId: string | undefined) => {
+function handleRouterFilter(routerId: string | undefined) {
   backupStore.setFilters({ routerId })
 }
 
@@ -81,7 +81,8 @@ async function handleDownload(backup: RouterBackup) {
     const filename = `${backup.router?.name || 'router'}-${new Date(backup.createdAt).toISOString().split('T')[0]}.rsc`
     await backupStore.downloadBackup(backup.id, filename)
     toast.success('Download started')
-  } catch (error) {
+  }
+  catch (error) {
     toast.error('Failed to download backup')
   }
 }
@@ -91,7 +92,8 @@ async function handlePinToggle(backup: RouterBackup) {
   try {
     await backupStore.togglePin(backup.id)
     toast.success(backup.isPinned ? 'Backup unpinned' : 'Backup pinned')
-  } catch (error) {
+  }
+  catch (error) {
     toast.error('Failed to toggle pin')
   }
 }

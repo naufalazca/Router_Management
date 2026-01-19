@@ -78,5 +78,8 @@ export default defineNuxtConfig({
     },
   },
 
+  // SSR Configuration - disable for static generation
+  ssr: false,
+
   compatibilityDate: '2024-12-14',
 })

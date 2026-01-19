@@ -79,12 +79,12 @@ export const useAuthStore = defineStore('auth', {
         const config = useRuntimeConfig()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
-        const response = await $fetch<{ token: string; user: User }>(`${apiBase}/users/login`, {
+        const response = await $fetch<{ success: boolean; data: { token: string; user: User } }>(`${apiBase}/users/login`, {
           method: 'POST',
           body: { username, password },
         })
 
-        this.setAuth(response.user, response.token)
+        this.setAuth(response.data.user, response.data.token)
         return { success: true }
       } catch (error: any) {
         console.error('Login error:', error)

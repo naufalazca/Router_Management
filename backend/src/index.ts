@@ -5,6 +5,8 @@ import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
 import { rateLimiter } from './middleware/rateLimiter';
 import routes from './routes';
+import { prisma } from './lib/prisma';
+import { Server } from 'http';
 
 const app: Application = express();
 
@@ -40,10 +42,64 @@ app.use(errorHandler);
 // Start Server
 const PORT = config.port;
 
-app.listen(PORT, () => {
+const server: Server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📝 Environment: ${config.nodeEnv}`);
   console.log(`🔗 API: http://localhost:${PORT}/api`);
+
+  // Signal PM2 that app is ready
+  if (process.send) {
+    process.send('ready');
+  }
+});
+
+// Graceful Shutdown Handler
+async function gracefulShutdown(signal: string) {
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+
+  // Stop accepting new requests
+  server.close(async (err) => {
+    if (err) {
+      console.error('Error during server close:', err);
+      process.exit(1);
+    }
+
+    console.log('HTTP server closed.');
+
+    try {
+      // Close Prisma connection
+      await prisma.$disconnect();
+      console.log('Database connections closed.');
+
+      console.log('Graceful shutdown completed.');
+      process.exit(0);
+    } catch (error) {
+      console.error('Error during graceful shutdown:', error);
+      process.exit(1);
+    }
+  });
+
+  // Force shutdown after 10 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+}
+
+// Listen for termination signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  gracefulShutdown('UNCAUGHT_EXCEPTION');
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  gracefulShutdown('UNHANDLED_REJECTION');
 });
 
 export default app;

@@ -1,0 +1,57 @@
+# Systemd Service File (Alternative to PM2)
+# This file provides systemd service configuration as an alternative to PM2
+#
+# Installation:
+#   sudo cp router-management.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable router-management
+#   sudo systemctl start router-management
+#
+# Note: PM2 is recommended for production. Use this only if you prefer systemd.
+
+[Unit]
+Description=Router Management System Backend API
+Documentation=https://github.com/yourusername/router-management
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/router-management/backend
+Environment=NODE_ENV=production
+
+# Load environment variables from .env file
+EnvironmentFile=/var/www/router-management/backend/.env
+
+# Start command
+ExecStart=/usr/bin/node dist/index.js
+
+# Restart policy
+Restart=always
+RestartSec=10
+StartLimitInterval=400
+StartLimitBurst=3
+
+# Resource limits
+MemoryLimit=512M
+MemoryMax=1G
+
+# Process management
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# Logging
+StandardOutput=append:/var/log/router-management/out.log
+StandardError=append:/var/log/router-management/error.log
+SyslogIdentifier=router-management
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/router-management/backend/logs
+
+[Install]
+WantedBy=multi-user.target

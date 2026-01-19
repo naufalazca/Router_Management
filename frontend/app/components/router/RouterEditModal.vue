@@ -1,0 +1,257 @@
+<script setup lang="ts">
+import { ref, watch, onMounted } from 'vue'
+import { useRouterStore, type Router, type UpdateRouterInput } from '~/stores/router'
+import { useCompanyStore } from '~/stores/company'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { toast } from 'vue-sonner'
+
+const props = defineProps<{
+  open: boolean
+  router: Router
+}>()
+
+const emit = defineEmits<{
+  'update:open': [value: boolean]
+  'success': []
+}>()
+
+const routerStore = useRouterStore()
+const companyStore = useCompanyStore()
+const isSubmitting = ref(false)
+
+const formData = ref<UpdateRouterInput>({
+  name: '',
+  ipAddress: '',
+  macAddress: '',
+  model: '',
+  location: '',
+  status: 'ACTIVE',
+  companyId: '',
+  username: '',
+  password: '',
+  apiPort: 8728
+})
+
+// Load companies on mount
+onMounted(async () => {
+  if (companyStore.companies.length === 0) {
+    await companyStore.fetchCompanies()
+  }
+})
+
+// Populate form when router prop changes
+watch(() => props.router, (newRouter) => {
+  if (newRouter) {
+    formData.value = {
+      name: newRouter.name,
+      ipAddress: newRouter.ipAddress,
+      macAddress: newRouter.macAddress || '',
+      model: newRouter.model || '',
+      location: newRouter.location || '',
+      status: newRouter.status,
+      companyId: newRouter.companyId || '',
+      username: newRouter.username,
+      password: '', // Don't populate password for security
+      apiPort: newRouter.apiPort || 8728
+    }
+  }
+}, { immediate: true })
+
+async function handleSubmit() {
+  // Validation
+  if (!formData.value.name || !formData.value.ipAddress) {
+    toast.error('Please fill in all required fields')
+    return
+  }
+
+  isSubmitting.value = true
+
+  try {
+    const result = await routerStore.updateRouter(props.router.id, formData.value)
+
+    if (result.success) {
+      emit('success')
+      emit('update:open', false)
+    } else {
+      toast.error(result.error || 'Failed to update router')
+    }
+  } catch (error) {
+    toast.error('An unexpected error occurred')
+  } finally {
+    isSubmitting.value = false
+  }
+}
+</script>
+
+<template>
+  <Dialog :open="props.open" @update:open="(val) => emit('update:open', val)">
+    <DialogContent class="sm:max-w-[500px] dialog-content">
+      <DialogHeader>
+        <DialogTitle class="font-mono">Update Device</DialogTitle>
+        <DialogDescription class="font-mono text-xs">
+          Modify network device parameters
+        </DialogDescription>
+      </DialogHeader>
+
+      <form @submit.prevent="handleSubmit" class="space-y-4 mt-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="col-span-2 space-y-2">
+            <label class="text-sm font-medium font-mono">Device Name *</label>
+            <Input
+              v-model="formData.name"
+              placeholder="Router-01"
+              required
+              class="font-mono"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-sm font-medium font-mono">IP Address *</label>
+            <Input
+              v-model="formData.ipAddress"
+              placeholder="192.168.1.1"
+              required
+              class="font-mono"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-sm font-medium font-mono">MAC Address</label>
+            <Input
+              v-model="formData.macAddress"
+              placeholder="00:00:00:00:00:00"
+              class="font-mono"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-sm font-medium font-mono">Model</label>
+            <Input
+              v-model="formData.model"
+              placeholder="RB4011"
+              class="font-mono"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-sm font-medium font-mono">Location</label>
+            <Input
+              v-model="formData.location"
+              placeholder="Main Office"
+              class="font-mono"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-sm font-medium font-mono">Company</label>
+            <select
+              v-model="formData.companyId"
+              class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] font-mono"
+            >
+              <option value="">No Company (Standalone)</option>
+              <option
+                v-for="company in companyStore.companies"
+                :key="company.id"
+                :value="company.id"
+              >
+                {{ company.name }} ({{ company.code }})
+              </option>
+            </select>
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-sm font-medium font-mono">Status</label>
+            <select
+              v-model="formData.status"
+              class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] font-mono"
+            >
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+              <option value="MAINTENANCE">Maintenance</option>
+            </select>
+          </div>
+
+          <div class="col-span-2 pt-2 border-t">
+            <h4 class="text-sm font-semibold font-mono mb-3 text-primary">RouterOS API Credentials</h4>
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-sm font-medium font-mono">Username</label>
+            <Input
+              v-model="formData.username"
+              placeholder="admin"
+              class="font-mono"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-sm font-medium font-mono">Password (leave empty to keep current)</label>
+            <Input
+              v-model="formData.password"
+              type="password"
+              placeholder="••••••••"
+              class="font-mono"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-sm font-medium font-mono">API Port</label>
+            <Input
+              v-model.number="formData.apiPort"
+              type="number"
+              placeholder="8728"
+              class="font-mono"
+            />
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            @click="emit('update:open', false)"
+            :disabled="isSubmitting"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            :disabled="isSubmitting"
+            class="command-btn"
+          >
+            {{ isSubmitting ? 'Updating...' : 'Update Device' }}
+          </Button>
+        </div>
+      </form>
+    </DialogContent>
+  </Dialog>
+</template>
+
+<style scoped>
+.dialog-content {
+  border: 1px solid hsl(var(--border) / 0.5);
+  box-shadow: 0 20px 40px -12px hsl(var(--foreground) / 0.15);
+}
+
+.command-btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 500;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
+  border: 1px solid hsl(var(--primary) / 0.3);
+  box-shadow: 0 2px 8px -2px hsl(var(--primary) / 0.3);
+  transition: all 0.2s;
+}
+
+.command-btn:hover {
+  box-shadow: 0 4px 16px -4px hsl(var(--primary) / 0.4);
+  transform: translateY(-1px);
+}
+</style>

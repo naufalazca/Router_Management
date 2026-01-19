@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Router {
+  id          String   @id @default(uuid())
+  name        String
+  ipAddress   String   @unique @map("ip_address")
+  macAddress  String?  @map("mac_address")
+  model       String?
+  location    String?
+  status      RouterStatus @default(ACTIVE)
+  lastSeen    DateTime? @map("last_seen")
+  companyId   String?  @map("company_id")
+  username    String   @default("admin")
+  password    String   @default("") // Encrypted with AES-256-GCM
+  apiPort     Int?     @default(8728) @map("api_port")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("routers")
+}
+
+enum RouterStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+// ==========================================
+// COMPANY MANAGEMENT
+// ==========================================
+
+model Company {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  code            String   @unique
+  address         String
+  description     String?
+  logo            String?
+  masterUsername  String   @map("master_username")
+  masterPassword  String   @map("master_password") // Encrypted with AES-256-GCM
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  routers         Router[]
+
+  @@map("companies")
+}
+
+// ==========================================
+// USER MANAGEMENT & AUTHENTICATION
+// ==========================================
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String   // Will store hashed password
+  email     String?  @unique
+  fullName  String?  @map("full_name")
+  role      UserRole @default(USER)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  VIEWER
+}

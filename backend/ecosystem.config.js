@@ -25,7 +25,7 @@ module.exports = {
 
       // Advanced features
       kill_timeout: 5000, // Time to wait for graceful shutdown (5s)
-      wait_ready: true, // Wait for app to send 'ready' signal
+      wait_ready: false, // Temporarily disabled to see actual error
       listen_timeout: 10000, // Max time to wait for app to listen
 
       // Restart strategy

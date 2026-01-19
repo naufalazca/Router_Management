@@ -72,63 +72,62 @@ function formatDate(dateString: string | null | undefined) {
 </script>
 
 <template>
-  <Card class="devices-table-card">
+  <Card>
     <CardHeader>
-      <CardTitle class="font-mono text-lg">Device Registry</CardTitle>
-      <CardDescription class="font-mono text-xs">
+      <CardTitle>Device Registry</CardTitle>
+      <CardDescription>
         Manage your network infrastructure
       </CardDescription>
     </CardHeader>
     <CardContent>
       <div v-if="isLoading" class="flex items-center justify-center py-12">
-        <div class="loading-spinner"></div>
+        <div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
       </div>
 
-      <div v-else-if="routers.length === 0" class="empty-state">
-        <Server class="h-12 w-12 text-muted-foreground opacity-30" />
-        <p class="text-muted-foreground font-mono">
+      <div v-else-if="routers.length === 0" class="flex flex-col items-center justify-center gap-4 py-12">
+        <Server class="h-12 w-12 text-muted-foreground/30" />
+        <p class="text-sm text-muted-foreground">
           {{ searchQuery ? 'No devices match your search' : 'No devices registered' }}
         </p>
       </div>
 
-      <Table v-else class="device-table">
+      <Table v-else>
         <TableHeader>
-          <TableRow class="table-header-row">
-            <TableHead class="font-mono text-xs">Device</TableHead>
-            <TableHead class="font-mono text-xs">Network</TableHead>
-            <TableHead class="font-mono text-xs">Hardware</TableHead>
-            <TableHead class="font-mono text-xs">Location</TableHead>
-            <TableHead class="font-mono text-xs">Status</TableHead>
-            <TableHead class="font-mono text-xs">Last Seen</TableHead>
-            <TableHead class="text-right font-mono text-xs">Actions</TableHead>
+          <TableRow>
+            <TableHead>Device</TableHead>
+            <TableHead>Network</TableHead>
+            <TableHead>Hardware</TableHead>
+            <TableHead>Location</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Last Seen</TableHead>
+            <TableHead class="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           <TableRow
             v-for="router in routers"
             :key="router.id"
-            class="device-row"
           >
             <TableCell class="font-medium">
               <div class="flex items-center gap-2">
-                <div class="device-icon">
-                  <Wifi class="h-3 w-3" />
+                <div class="flex h-6 w-6 items-center justify-center rounded border bg-primary/10 border-primary/20">
+                  <Wifi class="h-3 w-3 text-primary" />
                 </div>
-                <span class="font-mono">{{ router.name }}</span>
+                <span>{{ router.name }}</span>
               </div>
             </TableCell>
 
             <TableCell>
               <div class="space-y-0.5">
-                <p class="font-mono text-xs text-cyan-400">{{ router.ipAddress }}</p>
-                <p v-if="router.macAddress" class="font-mono text-xs text-muted-foreground">
+                <p class="text-sm text-cyan-600 dark:text-cyan-400">{{ router.ipAddress }}</p>
+                <p v-if="router.macAddress" class="text-xs text-muted-foreground">
                   {{ router.macAddress }}
                 </p>
               </div>
             </TableCell>
 
             <TableCell>
-              <p class="font-mono text-xs text-muted-foreground">
+              <p class="text-sm text-muted-foreground">
                 {{ router.model || '—' }}
               </p>
             </TableCell>
@@ -136,7 +135,7 @@ function formatDate(dateString: string | null | undefined) {
             <TableCell>
               <div v-if="router.location" class="flex items-center gap-1.5">
                 <MapPin class="h-3 w-3 text-muted-foreground" />
-                <span class="font-mono text-xs">{{ router.location }}</span>
+                <span class="text-sm">{{ router.location }}</span>
               </div>
               <span v-else class="text-muted-foreground">—</span>
             </TableCell>
@@ -144,7 +143,7 @@ function formatDate(dateString: string | null | undefined) {
             <TableCell>
               <Badge
                 :class="statusConfig[router.status].bgColor"
-                class="status-badge font-mono text-xs gap-1.5"
+                class="gap-1.5"
               >
                 <component
                   :is="statusConfig[router.status].icon"
@@ -158,40 +157,38 @@ function formatDate(dateString: string | null | undefined) {
             <TableCell>
               <div class="flex items-center gap-1.5">
                 <Clock class="h-3 w-3 text-muted-foreground" />
-                <span class="font-mono text-xs text-muted-foreground">
+                <span class="text-sm text-muted-foreground">
                   {{ formatDate(router.lastSeen) }}
                 </span>
               </div>
             </TableCell>
 
             <TableCell class="text-right">
-              <div class="flex items-center justify-end gap-2">
+              <div class="flex items-center justify-end gap-1">
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   @click="emit('view', router)"
-                  class="action-btn h-8 w-8 p-0"
                   title="View Details"
                 >
-                  <Eye class="h-3.5 w-3.5" />
+                  <Eye class="h-4 w-4" />
                 </Button>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   @click="emit('edit', router)"
-                  class="action-btn h-8 w-8 p-0"
                   title="Edit"
                 >
-                  <Pencil class="h-3.5 w-3.5" />
+                  <Pencil class="h-4 w-4" />
                 </Button>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   @click="emit('delete', router)"
-                  class="action-btn action-btn-danger h-8 w-8 p-0"
                   title="Delete"
+                  class="text-destructive hover:text-destructive"
                 >
-                  <Trash2 class="h-3.5 w-3.5" />
+                  <Trash2 class="h-4 w-4" />
                 </Button>
               </div>
             </TableCell>
@@ -201,97 +198,3 @@ function formatDate(dateString: string | null | undefined) {
     </CardContent>
   </Card>
 </template>
-
-<style scoped>
-/* Devices Table Card */
-.devices-table-card {
-  border: 1px solid hsl(var(--border) / 0.5);
-  background: hsl(var(--card));
-}
-
-/* Table Styling */
-.device-table {
-  font-family: 'IBM Plex Mono', monospace;
-}
-
-.table-header-row {
-  border-bottom: 2px solid hsl(var(--border) / 0.5);
-  background: hsl(var(--muted) / 0.3);
-}
-
-.table-header-row th {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-  color: hsl(var(--muted-foreground));
-}
-
-.device-row {
-  border-bottom: 1px solid hsl(var(--border) / 0.3);
-  transition: background-color 0.15s;
-}
-
-.device-row:hover {
-  background: hsl(var(--muted) / 0.3);
-}
-
-.device-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  background: hsl(var(--primary) / 0.1);
-  border: 1px solid hsl(var(--primary) / 0.2);
-  border-radius: 0.25rem;
-  color: hsl(var(--primary));
-}
-
-/* Status Badge */
-.status-badge {
-  border: 1px solid;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* Action Buttons */
-.action-btn {
-  opacity: 0.6;
-  transition: all 0.2s;
-}
-
-.action-btn:hover {
-  opacity: 1;
-  background: hsl(var(--muted));
-}
-
-.action-btn-danger:hover {
-  background: hsl(var(--destructive) / 0.1);
-  color: hsl(var(--destructive));
-}
-
-/* Loading Spinner */
-.loading-spinner {
-  width: 2rem;
-  height: 2rem;
-  border: 3px solid hsl(var(--muted));
-  border-top-color: hsl(var(--primary));
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Empty State */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 3rem 1rem;
-}
-</style>

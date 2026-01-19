@@ -92,7 +92,7 @@ const stats = computed(() => ({
 </script>
 
 <template>
-  <div class="network-ops w-full flex flex-col gap-6">
+  <div class="w-full space-y-6">
     <!-- Header Section -->
     <RouterHeader
       :total-devices="stats.total"
@@ -147,12 +147,3 @@ const stats = computed(() => ({
     />
   </div>
 </template>
-
-<style scoped>
-/* Typography - IBM Plex Mono + Outfit */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap');
-
-.network-ops {
-  font-family: 'Inter', system-ui, sans-serif;
-}
-</style>

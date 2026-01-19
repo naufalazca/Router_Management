@@ -32,19 +32,19 @@ useHead({
   },
 })
 
-const title = 'Nuxt Shadcn-Vue TailwindCSS 4 - Dashboard Template'
-const description = 'This dashboard, built with Nuxt, Shadcn Vue, and TailwindCSS. It includes a dark mode toggle and is optimized for performance and data efficiency.'
+const config = useRuntimeConfig()
+const title = config.public.appName
+const description = config.public.appDescription
+const url = config.public.appUrl
 
 useSeoMeta({
   title,
   description,
   ogTitle: title,
   ogDescription: description,
-  ogUrl: 'https://dashboard.dianprata.com',
-  ogImage: 'https://nuxt-shadcn-dashboard.vercel.app/social-card.png',
+  ogUrl: url,
   twitterTitle: title,
   twitterDescription: description,
-  twitterImage: 'https://nuxt-shadcn-dashboard.vercel.app/social-card.png',
   twitterCard: 'summary_large_image',
 })
 

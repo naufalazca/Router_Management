@@ -76,6 +76,9 @@ export default defineNuxtConfig({
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:5000/api',
       wsUrl: process.env.NUXT_PUBLIC_WS_URL || 'http://localhost:5000',
       appVersion: process.env.NUXT_PUBLIC_APP_VERSION || '1.0.0',
+      appName: process.env.NUXT_PUBLIC_APP_NAME || 'MikroTik Router Management',
+      appDescription: process.env.NUXT_PUBLIC_APP_DESCRIPTION || 'A full-stack web application for monitoring, configuring, and managing multiple MikroTik RouterOS devices',
+      appUrl: process.env.NUXT_PUBLIC_APP_URL || 'http://localhost:3000',
     },
   },
 

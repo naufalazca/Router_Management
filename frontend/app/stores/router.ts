@@ -23,6 +23,7 @@ export interface Router {
   username: string
   password: string
   apiPort?: number | null
+  sshPort?: number | null
   createdAt: string
   updatedAt: string
 }
@@ -38,6 +39,7 @@ export interface CreateRouterInput {
   username: string
   password: string
   apiPort?: number
+  sshPort?: number
 }
 
 export interface UpdateRouterInput {
@@ -52,6 +54,7 @@ export interface UpdateRouterInput {
   username?: string
   password?: string
   apiPort?: number
+  sshPort?: number
 }
 
 interface RouterState {

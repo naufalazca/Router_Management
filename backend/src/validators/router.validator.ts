@@ -10,7 +10,8 @@ export const createRouterSchema = z.object({
   companyId: z.string().uuid('Invalid company ID').optional(),
   username: z.string().min(1, 'Username is required'),
   password: z.string().min(1, 'Password is required'),
-  apiPort: z.coerce.number().int().positive().optional()
+  apiPort: z.coerce.number().int().positive().optional(),
+  sshPort: z.coerce.number().int().positive().optional()
 });
 
 export const updateRouterSchema = z.object({
@@ -24,7 +25,8 @@ export const updateRouterSchema = z.object({
   companyId: z.string().uuid('Invalid company ID').optional(),
   username: z.string().min(1).optional(),
   password: z.string().optional().transform(val => val === '' ? undefined : val),
-  apiPort: z.coerce.number().int().positive().optional()
+  apiPort: z.coerce.number().int().positive().optional(),
+  sshPort: z.coerce.number().int().positive().optional()
 });
 
 export type CreateRouterInput = z.infer<typeof createRouterSchema>;

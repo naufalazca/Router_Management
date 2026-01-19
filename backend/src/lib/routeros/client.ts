@@ -188,6 +188,108 @@ export class RouterOSClient {
   }
 
   /**
+   * Export configuration as .rsc file
+   *
+   * NOTE: RouterOS API does not support reading export output or file contents directly.
+   * This is a known limitation of the RouterOS API protocol.
+   *
+   * The only way to get export output is via SSH.
+   *
+   * @param _compact - If true, exports in compact format (no comments, no empty lines) - unused due to API limitations
+   * @returns Configuration export as string
+   */
+  async exportConfig(_compact: boolean = false): Promise<string> {
+    throw new Error(
+      'Export via RouterOS API is not supported. ' +
+      'The /export command does not return output via API, and file contents cannot be read via API. ' +
+      'Please use SSH-based export instead. ' +
+      'Enable SSH on RouterOS (/ip service enable ssh) and configure sshPort in router settings.'
+    );
+  }
+
+  /**
+   * Import configuration from .rsc file
+   * @param config - Configuration content as string
+   * @param verbose - If true, shows detailed import progress
+   * @returns Import result
+   */
+  async importConfig(config: string, verbose: boolean = false): Promise<RouterOSCommandResult> {
+    if (!this.connected) {
+      throw new Error('Not connected to RouterOS. Call connect() first.');
+    }
+
+    try {
+      // RouterOS import command format: /import file-name=filename.rsc
+      // Since we have config as string, we need to:
+      // 1. Upload it as a file first, or
+      // 2. Execute commands line by line
+
+      // For now, we'll execute commands line by line
+      // Split config into individual commands
+      const lines = config.split('\n').filter(line => {
+        const trimmed = line.trim();
+        // Skip empty lines and comments
+        return trimmed.length > 0 && !trimmed.startsWith('#');
+      });
+
+      const results: any[] = [];
+      const errors: string[] = [];
+
+      for (const line of lines) {
+        try {
+          // Execute each command
+          const result = await this.api.write(line);
+          if (verbose) {
+            results.push({ line, result });
+          }
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          errors.push(`Error executing "${line}": ${errorMsg}`);
+
+          // Continue with other commands even if one fails
+          // This allows partial imports
+        }
+      }
+
+      return {
+        success: errors.length === 0,
+        data: verbose ? results : undefined,
+        error: errors.length > 0 ? errors.join('; ') : undefined,
+      };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      return {
+        success: false,
+        error: `Failed to import configuration: ${errorMsg}`,
+      };
+    }
+  }
+
+  /**
+   * Get RouterOS version
+   * @returns RouterOS version string
+   */
+  async getVersion(): Promise<string> {
+    if (!this.connected) {
+      throw new Error('Not connected to RouterOS. Call connect() first.');
+    }
+
+    try {
+      const result = await this.execute('/system/resource/print');
+
+      if (!result.success || !result.data || result.data.length === 0) {
+        throw new Error('Failed to get system resource info');
+      }
+
+      const resource = result.data[0];
+      return resource.version || resource['version'] || 'Unknown';
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to get RouterOS version: ${errorMsg}`);
+    }
+  }
+
+  /**
    * Sleep utility for retry delays
    */
   private sleep(ms: number): Promise<void> {

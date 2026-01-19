@@ -37,7 +37,8 @@ const formData = ref<UpdateRouterInput>({
   companyId: '',
   username: '',
   password: '',
-  apiPort: 8728
+  apiPort: 8728,
+  sshPort: 22
 })
 
 // Load companies on mount
@@ -60,7 +61,8 @@ watch(() => props.router, (newRouter) => {
       companyId: newRouter.companyId || '',
       username: newRouter.username,
       password: '', // Don't populate password for security
-      apiPort: newRouter.apiPort || 8728
+      apiPort: newRouter.apiPort || 8728,
+      sshPort: newRouter.sshPort || 22
     }
   }
 }, { immediate: true })
@@ -180,7 +182,7 @@ async function handleSubmit() {
           </div>
 
           <div class="col-span-2 pt-2 border-t">
-            <h4 class="text-sm font-semibold font-mono mb-3 text-primary">RouterOS API Credentials</h4>
+            <h4 class="text-sm font-semibold font-mono mb-3 text-primary">RouterOS Credentials</h4>
           </div>
 
           <div class="space-y-2">
@@ -208,6 +210,16 @@ async function handleSubmit() {
               v-model.number="formData.apiPort"
               type="number"
               placeholder="8728"
+              class="font-mono"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-sm font-medium font-mono">SSH Port</label>
+            <Input
+              v-model.number="formData.sshPort"
+              type="number"
+              placeholder="22"
               class="font-mono"
             />
           </div>

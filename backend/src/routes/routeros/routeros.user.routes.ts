@@ -12,52 +12,52 @@ const router = Router();
 // All routes should require authentication in production
 
 /**
- * @route   GET /api/routeros/:routerId/users
+ * @route   GET /api/routeros/users/:routerId
  * @desc    Get all users from a router
  * @access  Private
  */
-router.get('/:routerId/users', userController.getUsers);
+router.get('/:routerId', userController.getUsers);
 
 /**
- * @route   GET /api/routeros/:routerId/users/:username
+ * @route   GET /api/routeros/users/:routerId/:username
  * @desc    Get a specific user by username
  * @access  Private
  */
-router.get('/:routerId/users/:username', userController.getUserByName);
+router.get('/:routerId/:username', userController.getUserByName);
 
 /**
- * @route   POST /api/routeros/:routerId/users
+ * @route   POST /api/routeros/users/:routerId
  * @desc    Create a new user on the router
  * @access  Private
  */
-router.post('/:routerId/users', userController.createUser);
+router.post('/:routerId', userController.createUser);
 
 /**
- * @route   PUT /api/routeros/:routerId/users/:userId
+ * @route   PUT /api/routeros/users/:routerId/:userId
  * @desc    Update an existing user
  * @access  Private
  */
-router.put('/:routerId/users/:userId', userController.updateUser);
+router.put('/:routerId/:userId', userController.updateUser);
 
 /**
- * @route   DELETE /api/routeros/:routerId/users/:userId
+ * @route   DELETE /api/routeros/users/:routerId/:userId
  * @desc    Delete a user from the router
  * @access  Private
  */
-router.delete('/:routerId/users/:userId', userController.deleteUser);
+router.delete('/:routerId/:userId', userController.deleteUser);
 
 /**
- * @route   POST /api/routeros/:routerId/users/:userId/enable
+ * @route   POST /api/routeros/users/:routerId/:userId/enable
  * @desc    Enable a user
  * @access  Private
  */
-router.post('/:routerId/users/:userId/enable', userController.enableUser);
+router.post('/:routerId/:userId/enable', userController.enableUser);
 
 /**
- * @route   POST /api/routeros/:routerId/users/:userId/disable
+ * @route   POST /api/routeros/users/:routerId/:userId/disable
  * @desc    Disable a user
  * @access  Private
  */
-router.post('/:routerId/users/:userId/disable', userController.disableUser);
+router.post('/:routerId/:userId/disable', userController.disableUser);
 
 export default router;

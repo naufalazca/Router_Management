@@ -185,12 +185,12 @@ function formatDate(dateString: string | null | undefined) {
           </CardContent>
         </Card>
 
-        <!-- RouterOS API Credentials Card -->
+        <!-- RouterOS Credentials Card -->
         <Card>
           <CardHeader>
             <CardTitle class="font-mono text-lg flex items-center gap-2">
               <Radio class="h-5 w-5" />
-              RouterOS API Credentials
+              RouterOS Credentials
             </CardTitle>
           </CardHeader>
           <CardContent class="space-y-4">
@@ -204,6 +204,15 @@ function formatDate(dateString: string | null | undefined) {
                 <p class="font-mono text-sm font-medium">{{ props.router.username }}</p>
               </div>
 
+              <!-- Password (masked) -->
+              <div class="space-y-1">
+                <div class="flex items-center gap-2 text-xs text-muted-foreground font-mono uppercase">
+                  <Lock class="h-3 w-3" />
+                  Password
+                </div>
+                <p class="font-mono text-sm text-muted-foreground">••••••••••••</p>
+              </div>
+
               <!-- API Port -->
               <div class="space-y-1">
                 <div class="flex items-center gap-2 text-xs text-muted-foreground font-mono uppercase">
@@ -213,13 +222,13 @@ function formatDate(dateString: string | null | undefined) {
                 <p class="font-mono text-sm">{{ props.router.apiPort || 8728 }}</p>
               </div>
 
-              <!-- Password (masked) -->
-              <div class="col-span-2 space-y-1">
+              <!-- SSH Port -->
+              <div class="space-y-1">
                 <div class="flex items-center gap-2 text-xs text-muted-foreground font-mono uppercase">
-                  <Lock class="h-3 w-3" />
-                  Password
+                  <Network class="h-3 w-3" />
+                  SSH Port
                 </div>
-                <p class="font-mono text-sm text-muted-foreground">••••••••••••</p>
+                <p class="font-mono text-sm">{{ props.router.sshPort || 22 }}</p>
               </div>
             </div>
           </CardContent>

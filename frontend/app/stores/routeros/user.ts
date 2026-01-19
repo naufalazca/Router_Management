@@ -68,7 +68,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
         const response = await $fetch<{ status: string; data: RouterOSUser[] }>(
-          `${apiBase}/routeros/${routerId}/users`,
+          `${apiBase}/routeros/users/${routerId}`,
           {
             headers: {
               Authorization: `Bearer ${authStore.token}`,
@@ -108,7 +108,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
         const response = await $fetch<{ status: string; data: RouterOSUser }>(
-          `${apiBase}/routeros/${routerId}/users/${username}`,
+          `${apiBase}/routeros/users/${routerId}/${username}`,
           {
             headers: {
               Authorization: `Bearer ${authStore.token}`,
@@ -152,7 +152,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
           status: string
           data: RouterOSUser
           message: string
-        }>(`${apiBase}/routeros/${routerId}/users`, {
+        }>(`${apiBase}/routeros/users/${routerId}`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${authStore.token}`,
@@ -203,7 +203,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
           status: string
           data: RouterOSUser
           message: string
-        }>(`${apiBase}/routeros/${routerId}/users/${userId}`, {
+        }>(`${apiBase}/routeros/users/${routerId}/${userId}`, {
           method: 'PUT',
           headers: {
             Authorization: `Bearer ${authStore.token}`,
@@ -254,7 +254,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
         const authStore = useAuthStore()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
-        await $fetch(`${apiBase}/routeros/${routerId}/users/${userId}`, {
+        await $fetch(`${apiBase}/routeros/users/${routerId}/${userId}`, {
           method: 'DELETE',
           headers: {
             Authorization: `Bearer ${authStore.token}`,
@@ -298,7 +298,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
           status: string
           data: RouterOSUser
           message: string
-        }>(`${apiBase}/routeros/${routerId}/users/${userId}/enable`, {
+        }>(`${apiBase}/routeros/users/${routerId}/${userId}/enable`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${authStore.token}`,
@@ -347,7 +347,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
           status: string
           data: RouterOSUser
           message: string
-        }>(`${apiBase}/routeros/${routerId}/users/${userId}/disable`, {
+        }>(`${apiBase}/routeros/users/${routerId}/${userId}/disable`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${authStore.token}`,

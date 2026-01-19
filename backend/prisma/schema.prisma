@@ -10,6 +10,59 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum RouterStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  VIEWER
+}
+
+enum BackupType {
+  EXPORT          // .rsc text-based export config
+  BINARY          // .backup binary format (future)
+  PARTIAL         // Partial configuration (future)
+}
+
+enum BackupStatus {
+  PENDING         // Backup queued or in progress
+  COMPLETED       // Successfully uploaded to R2
+  FAILED          // Backup process failed
+  EXPIRED         // Marked for deletion by retention policy
+}
+
+enum TriggerType {
+  MANUAL          // User-triggered via dashboard
+  SCHEDULED       // Auto-scheduled backup (cron)
+  PRE_UPDATE      // Before RouterOS update (future)
+}
+
+enum RestoreStatus {
+  PENDING         // Restore queued
+  IN_PROGRESS     // Restore in progress
+  COMPLETED       // Successfully restored
+  FAILED          // Restore failed
+  ROLLED_BACK     // Restore rolled back to safety backup
+}
+
+enum RestoreType {
+  FULL            // Full configuration restore
+  PREVIEW         // Dry-run/preview only (no actual restore)
+  PARTIAL         // Restore specific sections (future)
+}
+
+// ==========================================
+// ROUTER MANAGEMENT
+// ==========================================
+
 model Router {
   id          String   @id @default(uuid())
   name        String
@@ -23,18 +76,16 @@ model Router {
   username    String   @default("admin")
   password    String   @default("") // Encrypted with AES-256-GCM
   apiPort     Int?     @default(8728) @map("api_port")
+  sshPort     Int?     @default(22) @map("ssh_port")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  company     Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company         Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  backups         RouterBackup[]
+  backupSchedules BackupSchedule[]
+  restoreHistory  BackupRestore[]
 
   @@map("routers")
-}
-
-enum RouterStatus {
-  ACTIVE
-  INACTIVE
-  MAINTENANCE
 }
 
 // ==========================================
@@ -54,6 +105,7 @@ model Company {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   routers         Router[]
+  backupSchedules BackupSchedule[]
 
   @@map("companies")
 }
@@ -76,8 +128,113 @@ model User {
   @@map("users")
 }
 
-enum UserRole {
-  ADMIN
-  USER
-  VIEWER
+// ==========================================
+// BACKUP MANAGEMENT
+// ==========================================
+
+model RouterBackup {
+  id              String        @id @default(uuid())
+  routerId        String        @map("router_id")
+  backupType      BackupType    @default(EXPORT) @map("backup_type")
+
+  // R2 Storage Information
+  storageKey      String        @map("storage_key")        // R2 path: backups/{routerId}/{timestamp}.rsc
+  storageUrl      String?       @map("storage_url")        // Presigned URL (temporary)
+  fileSize        BigInt        @map("file_size")          // File size in bytes
+  checksum        String                                   // SHA256 hash for integrity
+
+  // Backup Metadata
+  routerVersion   String?       @map("router_version")     // RouterOS version at backup time
+  backupStatus    BackupStatus  @default(PENDING) @map("backup_status")
+  triggerType     TriggerType   @map("trigger_type")       // MANUAL or SCHEDULED
+  triggeredBy     String?       @map("triggered_by")       // User ID if manual trigger
+
+  // Configuration Summary (JSON)
+  configSummary   Json?         @map("config_summary")     // { interfaces: 10, firewall_rules: 45, users: 3, etc }
+
+  // Pin Feature - Protect from auto-deletion
+  isPinned        Boolean       @default(false) @map("is_pinned")
+  pinnedBy        String?       @map("pinned_by")          // User ID who pinned
+  pinnedAt        DateTime?     @map("pinned_at")
+  pinnedReason    String?       @map("pinned_reason")      // Optional note why pinned
+
+  // Safety Backup Flag
+  isSafetyBackup  Boolean       @default(false) @map("is_safety_backup") // Pre-restore backup
+
+  // Timestamps
+  createdAt       DateTime      @default(now()) @map("created_at")
+  completedAt     DateTime?     @map("completed_at")
+  expiresAt       DateTime?     @map("expires_at")         // For retention policy (null if pinned)
+
+  // Relations
+  router          Router        @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  restoreHistory  BackupRestore[]
+
+  @@map("router_backups")
+  @@index([routerId, createdAt])
+  @@index([backupStatus])
+  @@index([expiresAt])
+  @@index([isPinned])
+}
+
+model BackupSchedule {
+  id              String    @id @default(uuid())
+  routerId        String?   @map("router_id")          // Null = apply to all routers in company
+  companyId       String?   @map("company_id")         // Company-level schedule
+
+  // Schedule Configuration
+  isEnabled       Boolean   @default(true) @map("is_enabled")
+  cronExpression  String    @map("cron_expression")    // e.g., "0 2 * * *" (daily at 2 AM)
+  timezone        String    @default("UTC")
+
+  // Retention Policy (7-4-12 strategy)
+  retentionDays   Int       @default(7) @map("retention_days")      // Keep daily backups for 7 days
+  retentionWeeks  Int       @default(4) @map("retention_weeks")     // Keep weekly backups for 4 weeks
+  retentionMonths Int       @default(12) @map("retention_months")   // Keep monthly backups for 12 months
+
+  // Schedule Metadata
+  lastRunAt       DateTime? @map("last_run_at")
+  nextRunAt       DateTime? @map("next_run_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  router          Router?   @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  company         Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("backup_schedules")
+  @@index([routerId])
+  @@index([companyId])
+  @@index([nextRunAt])
+}
+
+model BackupRestore {
+  id              String        @id @default(uuid())
+  backupId        String        @map("backup_id")
+  routerId        String        @map("router_id")
+
+  // Restore Information
+  restoreStatus   RestoreStatus @default(PENDING) @map("restore_status")
+  restoredBy      String        @map("restored_by")        // User ID
+  restoreType     RestoreType   @default(FULL) @map("restore_type")
+
+  // Safety Backup Created Before Restore
+  safetyBackupId  String?       @map("safety_backup_id")   // ID of auto-created backup before restore
+
+  // Restore Results
+  errorMessage    String?       @map("error_message")
+  restoreLog      String?       @map("restore_log")        // RouterOS command output
+
+  // Timestamps
+  createdAt       DateTime      @default(now()) @map("created_at")
+  completedAt     DateTime?     @map("completed_at")
+
+  // Relations
+  backup          RouterBackup  @relation(fields: [backupId], references: [id], onDelete: Cascade)
+  router          Router        @relation(fields: [routerId], references: [id], onDelete: Cascade)
+
+  @@map("backup_restores")
+  @@index([backupId])
+  @@index([routerId])
+  @@index([createdAt])
 }

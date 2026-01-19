@@ -23,11 +23,34 @@ export const config = {
   },
   encryption: {
     key: process.env.ENCRYPTION_KEY || ''
+  },
+  r2: {
+    accountId: process.env.R2_ACCOUNT_ID || '',
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+    bucketName: process.env.R2_BUCKET_NAME || 'router-backups',
+    publicUrl: process.env.R2_PUBLIC_URL || '',
+    region: process.env.R2_REGION || 'auto'
+  },
+  backup: {
+    retention: {
+      daily: parseInt(process.env.BACKUP_RETENTION_DAILY || '7', 10),
+      weekly: parseInt(process.env.BACKUP_RETENTION_WEEKLY || '4', 10),
+      monthly: parseInt(process.env.BACKUP_RETENTION_MONTHLY || '12', 10)
+    }
   }
 };
 
 // Validate required environment variables
-const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET', 'ENCRYPTION_KEY'];
+const requiredEnvVars = [
+  'DATABASE_URL',
+  'JWT_SECRET',
+  'ENCRYPTION_KEY',
+  'R2_ACCOUNT_ID',
+  'R2_ACCESS_KEY_ID',
+  'R2_SECRET_ACCESS_KEY',
+  'R2_BUCKET_NAME'
+];
 
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {

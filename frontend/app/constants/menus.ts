@@ -31,6 +31,12 @@ export const navMenu: NavMenu[] = [
             icon: 'i-lucide-users',
             link: '/routeros/user',
           },
+          {
+            title: 'Backup & Restore',
+            icon: 'i-lucide-archive',
+            link: '/routeros/backup',
+            new: true,
+          },
         ],
       },
       {

@@ -9,5 +9,7 @@ export const rateLimiter = rateLimit({
     message: 'Too many requests, please try again later.'
   },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  // Use X-Forwarded-For header when behind proxy
+  validate: { xForwardedForHeader: false }
 });

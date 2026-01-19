@@ -10,6 +10,10 @@ import { Server } from 'http';
 
 const app: Application = express();
 
+// Trust proxy - Required when behind reverse proxy (nginx, load balancer, etc.)
+// This allows Express to trust X-Forwarded-* headers
+app.set('trust proxy', 1);
+
 // Security Middleware
 app.use(helmet());
 app.use(cors({

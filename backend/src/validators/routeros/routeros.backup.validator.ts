@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BackupType, TriggerType, BackupStatus, RestoreType } from '@prisma/client';
+import { BackupType, BackupStatus, RestoreType } from '@prisma/client';
 
 /**
  * Backup Management Validators

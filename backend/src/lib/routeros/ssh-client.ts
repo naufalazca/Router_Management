@@ -37,7 +37,7 @@ export class RouterOSSSHClient {
           console.log(`[SSH] Connected to ${this.config.host}`);
           resolve();
         })
-        .on('error', (err) => {
+        .on('error', (err: Error) => {
           console.error(`[SSH] Connection error:`, err);
           reject(err);
         })
@@ -70,7 +70,7 @@ export class RouterOSSSHClient {
     }
 
     return new Promise((resolve, reject) => {
-      this.client!.exec(command, (err, stream: ClientChannel) => {
+      this.client!.exec(command, (err: Error | undefined, stream: ClientChannel) => {
         if (err) {
           reject(err);
           return;
@@ -80,7 +80,7 @@ export class RouterOSSSHClient {
         let stderr = '';
 
         stream
-          .on('close', (code: number, signal: string) => {
+          .on('close', (code: number, _signal: string) => {
             if (code !== 0 && code !== null) {
               reject(new Error(`Command failed with code ${code}: ${stderr}`));
             } else {

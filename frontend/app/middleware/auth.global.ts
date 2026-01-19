@@ -1,6 +1,6 @@
 import { useAuthStore } from '~/stores/auth'
 
-export default defineNuxtRouteMiddleware(async (to) => {
+export default defineNuxtRouteMiddleware((to) => {
   // Skip middleware on server side
   if (import.meta.server) {
     return
@@ -9,7 +9,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const authStore = useAuthStore()
 
   // Initialize auth from localStorage on first load
-  await authStore.initAuth()
+  authStore.initAuth()
 
   // Allow access to login page
   if (to.path === '/login') {

@@ -48,7 +48,8 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async initAuth() {
+    initAuth() {
+      // Skip if already initialized in this session
       if (this.isInitialized) {
         return
       }
@@ -64,11 +65,13 @@ export const useAuthStore = defineStore('auth', {
             this.token = token
             this.isAuthenticated = true
           } catch (error) {
+            console.error('Failed to parse stored auth data:', error)
             this.clearAuth()
           }
         }
-        this.isInitialized = true
       }
+
+      this.isInitialized = true
     },
 
     async login(username: string, password: string) {

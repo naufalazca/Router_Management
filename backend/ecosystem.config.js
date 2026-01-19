@@ -9,7 +9,6 @@ module.exports = {
       // Environment variables
       env_production: {
         NODE_ENV: 'production',
-        PORT: 5000,
       },
 
       // Auto restart configuration
@@ -38,9 +37,10 @@ module.exports = {
       // Disable automatic restart during specific hours (optional)
       // cron_restart: '0 0 * * *', // Restart every day at midnight
 
-      // Environment-specific settings
+      // Environment-specific settings (default)
+      // All other env vars will be loaded from .env file
       env: {
-        NODE_ENV: 'development',
+        NODE_ENV: 'production',
       },
     },
   ],

@@ -28,7 +28,6 @@ import {
   FileText,
   Image,
   Server,
-  Wifi,
   CheckCircle2,
   XCircle,
   Wrench,
@@ -129,7 +128,7 @@ function formatDate(dateString: string | null | undefined) {
 
 <template>
   <Dialog :open="props.open" @update:open="(val) => emit('update:open', val)">
-    <DialogContent class="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+    <DialogContent class="sm:max-w-[800px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
       <DialogHeader>
         <DialogTitle class="font-mono">Company Details</DialogTitle>
         <DialogDescription class="font-mono text-xs">
@@ -190,7 +189,7 @@ function formatDate(dateString: string | null | undefined) {
                   <Image class="h-3 w-3" />
                   Logo URL
                 </div>
-                <a :href="companyDetails?.logo || props.company?.logo" target="_blank" class="font-mono text-sm text-blue-400 hover:underline break-all">
+                <a :href="(companyDetails?.logo || props.company?.logo) ?? undefined" target="_blank" class="font-mono text-sm text-blue-400 hover:underline break-all">
                   {{ companyDetails?.logo || props.company?.logo }}
                 </a>
               </div>
@@ -272,7 +271,8 @@ function formatDate(dateString: string | null | undefined) {
               </p>
             </div>
 
-            <Table v-else class="router-table">
+            <div v-else class="table-container">
+              <Table class="router-table">
               <TableHeader>
                 <TableRow class="table-header-row">
                   <TableHead class="font-mono text-xs">Device</TableHead>
@@ -289,30 +289,25 @@ function formatDate(dateString: string | null | undefined) {
                   class="router-row"
                 >
                   <TableCell class="font-medium">
-                    <div class="flex items-center gap-2">
-                      <div class="device-icon">
-                        <Wifi class="h-3 w-3" />
-                      </div>
-                      <div>
-                        <p class="font-mono text-sm">{{ router.name }}</p>
-                        <p v-if="router.model" class="font-mono text-xs text-muted-foreground">{{ router.model }}</p>
-                      </div>
+                    <div class="cell-content">
+                      <p class="font-mono text-sm overflow-wrap-anywhere">{{ router.name }}</p>
+                      <p v-if="router.model" class="font-mono text-xs text-muted-foreground overflow-wrap-anywhere">{{ router.model }}</p>
                     </div>
                   </TableCell>
 
                   <TableCell>
-                    <div class="space-y-0.5">
-                      <p class="font-mono text-xs text-cyan-400">{{ router.ipAddress }}</p>
-                      <p v-if="router.macAddress" class="font-mono text-xs text-muted-foreground">
+                    <div class="cell-content space-y-0.5">
+                      <p class="font-mono text-xs text-cyan-400 overflow-wrap-anywhere">{{ router.ipAddress }}</p>
+                      <p v-if="router.macAddress" class="font-mono text-xs text-muted-foreground overflow-wrap-anywhere">
                         {{ router.macAddress }}
                       </p>
                     </div>
                   </TableCell>
 
                   <TableCell>
-                    <div v-if="router.location" class="flex items-center gap-1.5">
-                      <MapPin class="h-3 w-3 text-muted-foreground" />
-                      <span class="font-mono text-xs">{{ router.location }}</span>
+                    <div v-if="router.location" class="cell-content flex items-center gap-1.5">
+                      <MapPin class="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      <span class="font-mono text-xs overflow-wrap-anywhere flex-1 min-w-0">{{ router.location }}</span>
                     </div>
                     <span v-else class="text-muted-foreground">—</span>
                   </TableCell>
@@ -342,6 +337,7 @@ function formatDate(dateString: string | null | undefined) {
                 </TableRow>
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
 
@@ -411,5 +407,64 @@ function formatDate(dateString: string | null | undefined) {
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.table-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.router-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.router-table th:nth-child(1),
+.router-table td:nth-child(1) {
+  width: 25%;
+  max-width: 0;
+}
+
+.router-table th:nth-child(2),
+.router-table td:nth-child(2) {
+  width: 20%;
+  max-width: 0;
+}
+
+.router-table th:nth-child(3),
+.router-table td:nth-child(3) {
+  width: 20%;
+  max-width: 0;
+}
+
+.router-table th:nth-child(4),
+.router-table td:nth-child(4) {
+  width: 15%;
+  max-width: 0;
+}
+
+.router-table th:nth-child(5),
+.router-table td:nth-child(5) {
+  width: 20%;
+  max-width: 0;
+}
+
+.router-table td {
+  overflow: hidden;
+}
+
+.cell-content {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.overflow-wrap-anywhere {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+  display: block;
+  max-width: 100%;
 }
 </style>

@@ -75,6 +75,7 @@ export default defineNuxtConfig({
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:5000/api',
       wsUrl: process.env.NUXT_PUBLIC_WS_URL || 'http://localhost:5000',
+      appVersion: process.env.NUXT_PUBLIC_APP_VERSION || '1.0.0',
     },
   },
 

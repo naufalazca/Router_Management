@@ -9,37 +9,30 @@ function resolveNavItemComponent(item: NavLink | NavGroup | NavSectionTitle): an
   return resolveComponent('LayoutSidebarNavLink')
 }
 
+const config = useRuntimeConfig()
+const appVersion = config.public.appVersion || '1.0.0'
+const authStore = useAuthStore()
+
 const teams: {
   name: string
   logo: string
   plan: string
 }[] = [
   {
-    name: 'Acme Inc',
-    logo: 'i-lucide-gallery-vertical-end',
-    plan: 'Enterprise',
-  },
-  {
-    name: 'Acme Corp.',
-    logo: 'i-lucide-audio-waveform',
-    plan: 'Startup',
-  },
-  {
-    name: 'Evil Corp.',
-    logo: 'i-lucide-command',
-    plan: 'Free',
+    name: 'Router Management',
+    logo: 'i-lucide-radio',
+    plan: `Version: ${appVersion}`,
   },
 ]
 
-const user: {
-  name: string
-  email: string
-  avatar: string
-} = {
-  name: 'Dian Pratama',
-  email: 'dianpratama2@gmail.com',
-  avatar: '/avatars/avatartion.png',
-}
+const user = computed(() => {
+  const currentUser = authStore.user
+  return {
+    name: currentUser?.fullName || currentUser?.username || 'Guest',
+    role: currentUser?.role || 'VIEWER',
+    avatar: '/avatars/avatartion.png',
+  }
+})
 
 const { sidebar } = useAppSettings()
 </script>

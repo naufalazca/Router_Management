@@ -35,6 +35,43 @@ export const navMenu: NavMenu[] = [
           },
         ],
       },
+      {
+        title: 'Troubleshoot',
+        icon: 'i-lucide-activity',
+        children: [
+          {
+            title: 'Ping',
+            icon: 'i-lucide-activity',
+            link: '/routeros/troubleshoot_ping',
+          },
+          {
+            title: 'Traceroute',
+            icon: 'i-lucide-git-branch',
+            link: '/routeros/troubleshoot_traceroute',
+          },
+        ],
+      },
+      {
+        title: 'Routing Management',
+        icon: 'i-lucide-network',
+        children: [
+          {
+            title: 'Connections',
+            icon: 'i-lucide-plug',
+            link: '/routeros/routing_connection',
+          },
+          {
+            title: 'Advertisements',
+            icon: 'i-lucide-arrow-up-down',
+            link: '/routeros/routing_advertisement',
+          },
+          {
+            title: 'Sessions',
+            icon: 'i-lucide-globe',
+            link: '/routeros/routing_session',
+          },
+        ],
+      },
     ],
   },
   {

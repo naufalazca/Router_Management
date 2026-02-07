@@ -64,6 +64,27 @@ export const INTERFACE_COMMANDS = {
 } as const;
 
 /**
+ * BGP Routing Commands (RouterOS v7)
+ */
+export const BGP_COMMANDS = {
+  CONNECTION: {
+    PRINT: '/routing/bgp/connection/print',
+    ENABLE: '/routing/bgp/connection/enable',
+    DISABLE: '/routing/bgp/connection/disable',
+    RESET: '/routing/bgp/connection/reset',
+    SET: '/routing/bgp/connection/set',
+    ADD: '/routing/bgp/connection/add',
+    REMOVE: '/routing/bgp/connection/remove',
+  },
+  ADVERTISEMENTS: {
+    PRINT: '/routing/bgp/advertisements/print',
+  },
+  SESSION: {
+    PRINT: '/routing/bgp/session/print',
+  },
+} as const;
+
+/**
  * Default User Groups in RouterOS
  */
 export const USER_GROUPS = {
@@ -79,4 +100,27 @@ export const RETRY_CONFIG = {
   MAX_RETRIES: 3,
   RETRY_DELAY: 1000, // milliseconds
   BACKOFF_MULTIPLIER: 2,
+} as const;
+
+/**
+ * Troubleshooting Commands
+ */
+export const TROUBLESHOOT_COMMANDS = {
+  PING: '/ping',
+  TRACEROUTE: '/tool traceroute',
+} as const;
+
+/**
+ * Default Troubleshooting Parameters
+ */
+export const TROUBLESHOOT_DEFAULTS = {
+  PING: {
+    COUNT: 4,
+    INTERVAL: '1000', // milliseconds (MikroTik uses ms without suffix)
+    SIZE: 64,
+  },
+  TRACEROUTE: {
+    COUNT: 10,
+    MAX_HOPS: 30,
+  },
 } as const;

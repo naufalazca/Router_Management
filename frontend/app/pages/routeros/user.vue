@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { RouterOSUser } from '~/stores/routeros/user'
 import {
+  AlertCircle,
   CheckCircle2,
   Eye,
   Pencil,
@@ -17,6 +18,7 @@ import {
 } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -73,6 +75,20 @@ watch(selectedRouterId, async (newRouterId) => {
   }
   else {
     routerosUserStore.clearUsers()
+  }
+})
+
+// Watch for errors from store and show toast
+watch(() => routerosUserStore.error, (newError) => {
+  if (newError) {
+    toast.error(newError)
+  }
+})
+
+// Watch for router store errors
+watch(() => routerStore.error, (newError) => {
+  if (newError) {
+    toast.error(`Router error: ${newError}`)
   }
 })
 
@@ -187,6 +203,68 @@ const stats = computed(() => ({
 
 <template>
   <div class="w-full space-y-6">
+    <!-- Error Alert for RouterOS User Operations -->
+    <Alert
+      v-if="routerosUserStore.error"
+      variant="destructive"
+      class="relative"
+    >
+      <AlertCircle class="h-4 w-4" />
+      <AlertTitle class="flex items-center justify-between">
+        <span>RouterOS Connection Error</span>
+        <button
+          type="button"
+          class="text-sm underline opacity-80 hover:opacity-100"
+          @click="routerosUserStore.clearError"
+        >
+          Dismiss
+        </button>
+      </AlertTitle>
+      <AlertDescription class="mt-2">
+        {{ routerosUserStore.error }}
+        <div v-if="selectedRouterId" class="mt-3 flex gap-2">
+          <button
+            type="button"
+            class="inline-flex items-center rounded-md bg-background px-3 py-1.5 text-sm font-medium hover:bg-background/80"
+            @click="routerosUserStore.fetchUsers(selectedRouterId)"
+          >
+            Retry Connection
+          </button>
+        </div>
+      </AlertDescription>
+    </Alert>
+
+    <!-- Error Alert for Router Selection -->
+    <Alert
+      v-if="routerStore.error && !routerosUserStore.error"
+      variant="destructive"
+      class="relative"
+    >
+      <AlertCircle class="h-4 w-4" />
+      <AlertTitle class="flex items-center justify-between">
+        <span>Router List Error</span>
+        <button
+          type="button"
+          class="text-sm underline opacity-80 hover:opacity-100"
+          @click="routerStore.clearError"
+        >
+          Dismiss
+        </button>
+      </AlertTitle>
+      <AlertDescription class="mt-2">
+        {{ routerStore.error }}
+        <div class="mt-3 flex gap-2">
+          <button
+            type="button"
+            class="inline-flex items-center rounded-md bg-background px-3 py-1.5 text-sm font-medium hover:bg-background/80"
+            @click="routerStore.fetchRouters()"
+          >
+            Retry
+          </button>
+        </div>
+      </AlertDescription>
+    </Alert>
+
     <!-- Header Section -->
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div class="space-y-1">

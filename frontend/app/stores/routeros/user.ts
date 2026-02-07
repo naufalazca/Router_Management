@@ -86,7 +86,9 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
       }
       catch (error: any) {
         console.error('Fetch RouterOS users error:', error)
-        this.error = error?.data?.message || 'Failed to fetch users'
+        this.error = error?.data?.message || error?.message || 'Failed to connect to RouterOS. Please check if the router is accessible and credentials are correct.'
+        // Clear old data on error to avoid confusion
+        this.users = []
         return {
           success: false,
           error: this.error,
@@ -129,7 +131,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
       }
       catch (error: any) {
         console.error('Fetch RouterOS user error:', error)
-        this.error = error?.data?.message || 'Failed to fetch user'
+        this.error = error?.data?.message || error?.message || 'Failed to fetch user details'
         return {
           success: false,
           error: this.error,
@@ -178,7 +180,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
       }
       catch (error: any) {
         console.error('Create RouterOS user error:', error)
-        this.error = error?.data?.message || 'Failed to create user'
+        this.error = error?.data?.message || error?.message || 'Failed to create user on RouterOS'
         return {
           success: false,
           error: this.error,
@@ -239,7 +241,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
       }
       catch (error: any) {
         console.error('Update RouterOS user error:', error)
-        this.error = error?.data?.message || 'Failed to update user'
+        this.error = error?.data?.message || error?.message || 'Failed to update user on RouterOS'
         return {
           success: false,
           error: this.error,
@@ -281,7 +283,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
       }
       catch (error: any) {
         console.error('Delete RouterOS user error:', error)
-        this.error = error?.data?.message || 'Failed to delete user'
+        this.error = error?.data?.message || error?.message || 'Failed to delete user from RouterOS'
         return {
           success: false,
           error: this.error,
@@ -332,7 +334,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
       }
       catch (error: any) {
         console.error('Enable RouterOS user error:', error)
-        this.error = error?.data?.message || 'Failed to enable user'
+        this.error = error?.data?.message || error?.message || 'Failed to enable user on RouterOS'
         return {
           success: false,
           error: this.error,
@@ -383,7 +385,7 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
       }
       catch (error: any) {
         console.error('Disable RouterOS user error:', error)
-        this.error = error?.data?.message || 'Failed to disable user'
+        this.error = error?.data?.message || error?.message || 'Failed to disable user on RouterOS'
         return {
           success: false,
           error: this.error,

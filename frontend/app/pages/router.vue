@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { Router } from '~/stores/router'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { AlertCircle } from 'lucide-vue-next'
 import RouterCreateModal from '~/components/router/RouterCreateModal.vue'
 import RouterDeleteDialog from '~/components/router/RouterDeleteDialog.vue'
 import RouterEditModal from '~/components/router/RouterEditModal.vue'
@@ -13,6 +15,13 @@ import { useRouterStore } from '~/stores/router'
 
 const routerStore = useRouterStore()
 const searchQuery = ref('')
+
+// Watch for errors from store and show toast
+watch(() => routerStore.error, (newError) => {
+  if (newError) {
+    toast.error(newError)
+  }
+})
 
 // Modal states
 const isCreateModalOpen = ref(false)
@@ -95,6 +104,37 @@ const stats = computed(() => ({
 
 <template>
   <div class="w-full space-y-6">
+    <!-- Error Alert -->
+    <Alert
+      v-if="routerStore.error"
+      variant="destructive"
+      class="relative"
+    >
+      <AlertCircle class="h-4 w-4" />
+      <AlertTitle class="flex items-center justify-between">
+        <span>Error Loading Data</span>
+        <button
+          type="button"
+          class="text-sm underline opacity-80 hover:opacity-100"
+          @click="routerStore.clearError"
+        >
+          Dismiss
+        </button>
+      </AlertTitle>
+      <AlertDescription class="mt-2">
+        {{ routerStore.error }}
+        <div class="mt-3 flex gap-2">
+          <button
+            type="button"
+            class="inline-flex items-center rounded-md bg-background px-3 py-1.5 text-sm font-medium hover:bg-background/80"
+            @click="routerStore.fetchRouters()"
+          >
+            Retry
+          </button>
+        </div>
+      </AlertDescription>
+    </Alert>
+
     <!-- Header Section -->
     <RouterHeader
       :total-devices="stats.total"

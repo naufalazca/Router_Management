@@ -96,7 +96,9 @@ export const useRouterStore = defineStore('router', {
       }
       catch (error: any) {
         console.error('Fetch routers error:', error)
-        this.error = error?.data?.message || 'Failed to fetch routers'
+        this.error = error?.data?.message || error?.message || 'Failed to fetch routers. Please check your connection.'
+        // Clear old data on error to avoid confusion
+        this.routers = []
         return {
           success: false,
           error: this.error,
@@ -130,7 +132,7 @@ export const useRouterStore = defineStore('router', {
       }
       catch (error: any) {
         console.error('Fetch router error:', error)
-        this.error = error?.data?.message || 'Failed to fetch router'
+        this.error = error?.data?.message || error?.message || 'Failed to fetch router details'
         return {
           success: false,
           error: this.error,
@@ -167,7 +169,7 @@ export const useRouterStore = defineStore('router', {
       }
       catch (error: any) {
         console.error('Create router error:', error)
-        this.error = error?.data?.message || 'Failed to create router'
+        this.error = error?.data?.message || error?.message || 'Failed to create router'
         return {
           success: false,
           error: this.error,
@@ -213,7 +215,7 @@ export const useRouterStore = defineStore('router', {
       }
       catch (error: any) {
         console.error('Update router error:', error)
-        this.error = error?.data?.message || 'Failed to update router'
+        this.error = error?.data?.message || error?.message || 'Failed to update router'
         return {
           success: false,
           error: this.error,
@@ -252,7 +254,7 @@ export const useRouterStore = defineStore('router', {
       }
       catch (error: any) {
         console.error('Delete router error:', error)
-        this.error = error?.data?.message || 'Failed to delete router'
+        this.error = error?.data?.message || error?.message || 'Failed to delete router'
         return {
           success: false,
           error: this.error,

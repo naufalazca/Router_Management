@@ -117,7 +117,7 @@ export class RouterService {
   }
 
   async getRouterByIp(ipAddress: string) {
-    return await prisma.router.findUnique({
+    return await prisma.router.findFirst({
       where: { ipAddress }
     });
   }

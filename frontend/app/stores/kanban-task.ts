@@ -45,8 +45,9 @@ export const useKanbanTaskStore = defineStore('kanban-task', {
           },
         )
 
-        this.tasks = response.data || []
-        return { success: true, data: response.data }
+        // Return a copy of the data to avoid shared references between lists
+        const tasksData = response.data ? [...response.data] : []
+        return { success: true, data: tasksData }
       }
       catch (error: any) {
         console.error('Fetch tasks error:', error)
@@ -115,9 +116,8 @@ export const useKanbanTaskStore = defineStore('kanban-task', {
           },
         )
 
-        if (response.data) {
-          this.tasks.push(response.data)
-        }
+        // Don't modify this.tasks here - KanbanBoard manages list-specific tasks
+        // This global tasks array is only used for single-list views
         return { success: true, data: response.data }
       }
       catch (error: any) {
@@ -198,14 +198,12 @@ export const useKanbanTaskStore = defineStore('kanban-task', {
           },
         )
 
-        // Remove task from the array
-        this.tasks = this.tasks.filter(t => t.id !== taskId)
-
         // Clear current task if it's the one being deleted
         if (this.currentTask?.id === taskId) {
           this.currentTask = null
         }
 
+        // Don't modify this.tasks - KanbanBoard manages list-specific tasks
         return { success: true }
       }
       catch (error: any) {
@@ -241,9 +239,7 @@ export const useKanbanTaskStore = defineStore('kanban-task', {
           },
         )
 
-        // Remove task from current list
-        this.tasks = this.tasks.filter(t => t.id !== taskId)
-
+        // Don't modify this.tasks - KanbanBoard manages list-specific tasks
         return { success: true, data: response.data }
       }
       catch (error: any) {

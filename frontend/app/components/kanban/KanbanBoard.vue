@@ -344,15 +344,20 @@ async function loadTasksForList(listId: string) {
 }
 
 // Load all tasks when board or lists change
-watch(() => listStore.lists, async (newLists) => {
+watch(() => listStore.lists, async (newLists, oldLists) => {
   if (!kanbanStore.selectedBoardId)
     return
 
-  // Load tasks for each list
-  for (const list of newLists) {
-    await loadTasksForList(list.id)
+  // Only reload if the number of lists changed or board changed
+  // Deep watch is removed to prevent unnecessary reloads
+  const oldLength = oldLists?.length || 0
+  if (newLists.length !== oldLength) {
+    // Load tasks for each list
+    for (const list of newLists) {
+      await loadTasksForList(list.id)
+    }
   }
-}, { immediate: true, deep: true })
+}, { immediate: true })
 
 function getTasksForList(listId: string): ApiTask[] {
   return listTasks.value[listId] || []
@@ -402,6 +407,11 @@ const OPTIONS: UseTimeAgoOptions<false, UseTimeAgoUnitNamesDefault> = {
   showSecond: true,
   rounding: 'floor',
   updateInterval: 1000,
+}
+
+function isCompletedList(listName: string): boolean {
+  const completedKeywords = ['selesai', 'done', 'finish']
+  return completedKeywords.some(keyword => listName.toLowerCase().includes(keyword))
 }
 </script>
 
@@ -497,53 +507,62 @@ const OPTIONS: UseTimeAgoOptions<false, UseTimeAgoUnitNamesDefault> = {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <p class="font-medium leading-5 mt-1">
-                    {{ task.title }}
-                  </p>
-                  <div v-if="task.description" class="mt-2 text-sm text-muted-foreground line-clamp-2">
-                    {{ task.description }}
-                  </div>
-                  <div v-if="task.taskLabels && task.taskLabels.length > 0" class="mt-3 flex items-center gap-1.5 flex-wrap">
-                    <Badge
-                      v-for="taskLabel in task.taskLabels"
-                      :key="taskLabel.id"
-                      variant="outline"
-                      :style="{ borderColor: taskLabel.label?.color, color: taskLabel.label?.color }"
-                    >
-                      {{ taskLabel.label?.name }}
-                    </Badge>
-                  </div>
-                  <div class="mt-3 flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-2">
-                      <div v-if="task.attachments && task.attachments.length > 0" class="flex items-center text-sm text-muted-foreground gap-1">
-                        <Icon name="lucide:paperclip" class="size-3.5" />
-                        <span>{{ task.attachments.length }}</span>
+                  <!-- Show only title with strikethrough for completed lists -->
+                  <template v-if="isCompletedList(list.name)">
+                    <p class="font-medium leading-5 mt-1 line-through text-muted-foreground">
+                      {{ task.title }}
+                    </p>
+                  </template>
+                  <!-- Show full task details for non-completed lists -->
+                  <template v-else>
+                    <p class="font-medium leading-5 mt-1">
+                      {{ task.title }}
+                    </p>
+                    <div v-if="task.description" class="mt-2 text-sm text-muted-foreground line-clamp-2">
+                      {{ task.description }}
+                    </div>
+                    <div v-if="task.taskLabels && task.taskLabels.length > 0" class="mt-3 flex items-center gap-1.5 flex-wrap">
+                      <Badge
+                        v-for="taskLabel in task.taskLabels"
+                        :key="taskLabel.id"
+                        variant="outline"
+                        :style="{ borderColor: taskLabel.label?.color, color: taskLabel.label?.color }"
+                      >
+                        {{ taskLabel.label?.name }}
+                      </Badge>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between gap-2">
+                      <div class="flex items-center gap-2">
+                        <div v-if="task.attachments && task.attachments.length > 0" class="flex items-center text-sm text-muted-foreground gap-1">
+                          <Icon name="lucide:paperclip" class="size-3.5" />
+                          <span>{{ task.attachments.length }}</span>
+                        </div>
+                        <div v-if="task.comments && task.comments.length > 0" class="flex items-center text-sm text-muted-foreground gap-1">
+                          <Icon name="lucide:message-square" class="size-3.5" />
+                          <span>{{ task.comments.length }}</span>
+                        </div>
+                        <div v-if="task.dueDate" class="flex items-center text-sm text-muted-foreground gap-1">
+                          <Icon name="lucide:clock" class="size-3.5" />
+                          <span>{{ useTimeAgo(task.dueDate, OPTIONS) }}</span>
+                        </div>
                       </div>
-                      <div v-if="task.comments && task.comments.length > 0" class="flex items-center text-sm text-muted-foreground gap-1">
-                        <Icon name="lucide:message-square" class="size-3.5" />
-                        <span>{{ task.comments.length }}</span>
-                      </div>
-                      <div v-if="task.dueDate" class="flex items-center text-sm text-muted-foreground gap-1">
-                        <Icon name="lucide:clock" class="size-3.5" />
-                        <span>{{ useTimeAgo(task.dueDate, OPTIONS) }}</span>
+                      <div class="flex items-center gap-2">
+                        <Tooltip v-if="task.priority">
+                          <TooltipTrigger as-child>
+                            <Icon :name="iconPriority(task.priority)" class="size-4" :class="colorPriority(task.priority)" />
+                          </TooltipTrigger>
+                          <TooltipContent class="capitalize">
+                            {{ task.priority.toLowerCase() }}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Avatar v-if="task.creator" class="size-6">
+                          <AvatarFallback class="text-[10px]">
+                            {{ task.creator.username.substring(0, 2).toUpperCase() }}
+                          </AvatarFallback>
+                        </Avatar>
                       </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                      <Tooltip v-if="task.priority">
-                        <TooltipTrigger as-child>
-                          <Icon :name="iconPriority(task.priority)" class="size-4" :class="colorPriority(task.priority)" />
-                        </TooltipTrigger>
-                        <TooltipContent class="capitalize">
-                          {{ task.priority.toLowerCase() }}
-                        </TooltipContent>
-                      </Tooltip>
-                      <Avatar v-if="task.creator" class="size-6">
-                        <AvatarFallback class="text-[10px]">
-                          {{ task.creator.username.substring(0, 2).toUpperCase() }}
-                        </AvatarFallback>
-                      </Avatar>
-                    </div>
-                  </div>
+                  </template>
                 </div>
               </template>
             </Draggable>

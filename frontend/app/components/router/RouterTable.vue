@@ -41,21 +41,35 @@ const statusConfig = {
   ACTIVE: {
     icon: CheckCircle2,
     variant: 'default' as const,
-    color: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/10 border-emerald-500/20',
+    color: 'text-white dark:text-emerald-300',
+    bgColor: 'bg-emerald-600 dark:bg-emerald-500/20 border-emerald-600 dark:border-emerald-500/30',
   },
   INACTIVE: {
     icon: XCircle,
     variant: 'secondary' as const,
-    color: 'text-slate-400',
-    bgColor: 'bg-slate-500/10 border-slate-500/20',
+    color: 'text-white dark:text-slate-300',
+    bgColor: 'bg-slate-600 dark:bg-slate-500/20 border-slate-600 dark:border-slate-500/30',
   },
   MAINTENANCE: {
     icon: Wrench,
     variant: 'outline' as const,
-    color: 'text-amber-400',
-    bgColor: 'bg-amber-500/10 border-amber-500/20',
+    color: 'text-white dark:text-amber-300',
+    bgColor: 'bg-amber-600 dark:bg-amber-500/20 border-amber-600 dark:border-amber-500/30',
   },
+}
+
+// Router Type badge config
+const routerTypeConfig: Record<string, { label: string; color: string; bgColor: string }> = {
+  UPSTREAM: { label: 'Upstream', color: 'text-white dark:text-violet-300', bgColor: 'bg-violet-600 dark:bg-violet-500/20 border-violet-600 dark:border-violet-500/30' },
+  CORE: { label: 'Core', color: 'text-white dark:text-blue-300', bgColor: 'bg-blue-600 dark:bg-blue-500/20 border-blue-600 dark:border-blue-500/30' },
+  DISTRIBUSI: { label: 'Distribusi', color: 'text-white dark:text-orange-300', bgColor: 'bg-orange-600 dark:bg-orange-500/20 border-orange-600 dark:border-orange-500/30' },
+  WIRELESS: { label: 'Wireless', color: 'text-white dark:text-cyan-300', bgColor: 'bg-cyan-600 dark:bg-cyan-500/20 border-cyan-600 dark:border-cyan-500/30' },
+}
+
+// Router Brand badge config
+const routerBrandConfig: Record<string, { label: string; color: string; bgColor: string }> = {
+  MIKROTIK: { label: 'MikroTik', color: 'text-white dark:text-sky-300', bgColor: 'bg-sky-600 dark:bg-sky-500/20 border-sky-600 dark:border-sky-500/30' },
+  UBIVIQUITI: { label: 'Ubiquiti', color: 'text-white dark:text-teal-300', bgColor: 'bg-teal-600 dark:bg-teal-500/20 border-teal-600 dark:border-teal-500/30' },
 }
 
 // Format date
@@ -97,6 +111,7 @@ function formatDate(dateString: string | null | undefined) {
           <TableRow>
             <TableHead>Device</TableHead>
             <TableHead>Network</TableHead>
+            <TableHead>Type / Brand</TableHead>
             <TableHead>Hardware</TableHead>
             <TableHead>Location</TableHead>
             <TableHead>Status</TableHead>
@@ -132,6 +147,33 @@ function formatDate(dateString: string | null | undefined) {
             </TableCell>
 
             <TableCell>
+              <div class="flex flex-wrap gap-1">
+                <Badge
+                  v-if="routerTypeConfig[router.routerType]"
+                  :class="[
+                    routerTypeConfig[router.routerType].bgColor,
+                    routerTypeConfig[router.routerType].color,
+                    'border font-medium'
+                  ]"
+                  class="text-xs"
+                >
+                  {{ routerTypeConfig[router.routerType].label }}
+                </Badge>
+                <Badge
+                  v-if="routerBrandConfig[router.routerBrand]"
+                  :class="[
+                    routerBrandConfig[router.routerBrand].bgColor,
+                    routerBrandConfig[router.routerBrand].color,
+                    'border font-medium'
+                  ]"
+                  class="text-xs"
+                >
+                  {{ routerBrandConfig[router.routerBrand].label }}
+                </Badge>
+              </div>
+            </TableCell>
+
+            <TableCell>
               <p class="text-sm text-muted-foreground">
                 {{ router.model || '—' }}
               </p>
@@ -147,12 +189,14 @@ function formatDate(dateString: string | null | undefined) {
 
             <TableCell>
               <Badge
-                :class="statusConfig[router.status].bgColor"
-                class="gap-1.5"
+                :class="[
+                  statusConfig[router.status].bgColor,
+                  statusConfig[router.status].color,
+                  'border gap-1.5 font-medium'
+                ]"
               >
                 <component
                   :is="statusConfig[router.status].icon"
-                  :class="statusConfig[router.status].color"
                   class="h-3 w-3"
                 />
                 {{ router.status }}

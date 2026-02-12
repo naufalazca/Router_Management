@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma';
-import { RouterStatus } from '@prisma/client';
+import { RouterStatus, RouterType, RouterBrand } from '@prisma/client';
 import { encrypt } from '../lib/encryption';
 
 interface CreateRouterData {
@@ -9,10 +9,13 @@ interface CreateRouterData {
   model?: string;
   location?: string;
   status?: RouterStatus;
+  routerType?: RouterType;
+  routerBrand?: RouterBrand;
   companyId?: string;
   username: string;
   password: string;
   apiPort?: number;
+  sshPort?: number;
 }
 
 interface UpdateRouterData {
@@ -22,11 +25,14 @@ interface UpdateRouterData {
   model?: string;
   location?: string;
   status?: RouterStatus;
+  routerType?: RouterType;
+  routerBrand?: RouterBrand;
   lastSeen?: Date;
   companyId?: string;
   username?: string;
   password?: string;
   apiPort?: number;
+  sshPort?: number;
 }
 
 export class RouterService {
@@ -43,6 +49,32 @@ export class RouterService {
       },
       orderBy: {
         createdAt: 'desc'
+      }
+    });
+  }
+
+  /**
+   * Get routers that support BGP operations
+   * Only returns MikroTik routers with type UPSTREAM and status ACTIVE
+   */
+  async getBgpRouters() {
+    return await prisma.router.findMany({
+      where: {
+        routerBrand: RouterBrand.MIKROTIK,
+        routerType: RouterType.UPSTREAM,
+        status: RouterStatus.ACTIVE
+      },
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        }
+      },
+      orderBy: {
+        name: 'asc'
       }
     });
   }

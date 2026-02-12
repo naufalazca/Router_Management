@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { useAuthStore } from './auth'
 
 export type RouterStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE'
+export type RouterType = 'UPSTREAM' | 'CORE' | 'DISTRIBUSI' | 'WIRELESS'
+export type RouterBrand = 'MIKROTIK' | 'UBIVIQUITI'
 
 export interface CompanyInfo {
   id: string
@@ -17,6 +19,8 @@ export interface Router {
   model?: string | null
   location?: string | null
   status: RouterStatus
+  routerType: RouterType
+  routerBrand: RouterBrand
   lastSeen?: string | null
   companyId?: string | null
   company?: CompanyInfo | null
@@ -35,6 +39,8 @@ export interface CreateRouterInput {
   model?: string
   location?: string
   status?: RouterStatus
+  routerType?: RouterType
+  routerBrand?: RouterBrand
   companyId?: string
   username: string
   password: string
@@ -49,6 +55,8 @@ export interface UpdateRouterInput {
   model?: string
   location?: string
   status?: RouterStatus
+  routerType?: RouterType
+  routerBrand?: RouterBrand
   lastSeen?: string
   companyId?: string
   username?: string
@@ -59,6 +67,7 @@ export interface UpdateRouterInput {
 
 interface RouterState {
   routers: Router[]
+  bgpRouters: Router[]  // Routers that support BGP (MikroTik + Upstream + Active)
   currentRouter: Router | null
   isLoading: boolean
   error: string | null
@@ -67,6 +76,7 @@ interface RouterState {
 export const useRouterStore = defineStore('router', {
   state: (): RouterState => ({
     routers: [],
+    bgpRouters: [],
     currentRouter: null,
     isLoading: false,
     error: null,
@@ -99,6 +109,45 @@ export const useRouterStore = defineStore('router', {
         this.error = error?.data?.message || error?.message || 'Failed to fetch routers. Please check your connection.'
         // Clear old data on error to avoid confusion
         this.routers = []
+        return {
+          success: false,
+          error: this.error,
+        }
+      }
+      finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * Fetch routers that support BGP operations
+     * Only returns MikroTik routers with type UPSTREAM and status ACTIVE
+     */
+    async fetchBgpRouters() {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const config = useRuntimeConfig()
+        const authStore = useAuthStore()
+        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+
+        const response = await $fetch<{ status: string, data: Router[] }>(
+          `${apiBase}/routers/bgp`,
+          {
+            headers: {
+              Authorization: `Bearer ${authStore.token}`,
+            },
+          },
+        )
+
+        this.bgpRouters = response.data
+        return { success: true, data: response.data }
+      }
+      catch (error: any) {
+        console.error('Fetch BGP routers error:', error)
+        this.error = error?.data?.message || error?.message || 'Failed to fetch BGP routers. Please check your connection.'
+        this.bgpRouters = []
         return {
           success: false,
           error: this.error,
@@ -283,6 +332,26 @@ export const useRouterStore = defineStore('router', {
 
     maintenanceRouters: state =>
       state.routers.filter(r => r.status === 'MAINTENANCE'),
+
+    // Filter by RouterType
+    upstreamRouters: state =>
+      state.routers.filter(r => r.routerType === 'UPSTREAM'),
+
+    coreRouters: state =>
+      state.routers.filter(r => r.routerType === 'CORE'),
+
+    distribusiRouters: state =>
+      state.routers.filter(r => r.routerType === 'DISTRIBUSI'),
+
+    wirelessRouters: state =>
+      state.routers.filter(r => r.routerType === 'WIRELESS'),
+
+    // Filter by RouterBrand
+    mikrotikRouters: state =>
+      state.routers.filter(r => r.routerBrand === 'MIKROTIK'),
+
+    ubiquitiRouters: state =>
+      state.routers.filter(r => r.routerBrand === 'UBIVIQUITI'),
 
     routerCount: state => state.routers.length,
 

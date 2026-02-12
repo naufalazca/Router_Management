@@ -21,6 +21,22 @@ export class RouterController {
     }
   };
 
+  /**
+   * Get routers that support BGP operations
+   * Only returns MikroTik routers with type UPSTREAM and status ACTIVE
+   */
+  getBgpRouters = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const routers = await this.routerService.getBgpRouters();
+      res.json({
+        status: 'success',
+        data: routers
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;

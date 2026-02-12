@@ -35,6 +35,8 @@ const formData = ref<UpdateRouterInput>({
   model: '',
   location: '',
   status: 'ACTIVE',
+  routerType: 'CORE',
+  routerBrand: 'MIKROTIK',
   companyId: '',
   username: '',
   password: '',
@@ -59,6 +61,8 @@ watch(() => props.router, (newRouter) => {
       model: newRouter.model || '',
       location: newRouter.location || '',
       status: newRouter.status,
+      routerType: newRouter.routerType,
+      routerBrand: newRouter.routerBrand,
       companyId: newRouter.companyId || '',
       username: newRouter.username,
       password: '', // Don't populate password for security
@@ -178,6 +182,42 @@ async function handleSubmit() {
           </div>
 
           <div class="space-y-2">
+            <label class="text-sm font-medium font-mono">Router Type</label>
+            <select
+              v-model="formData.routerType"
+              class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono"
+            >
+              <option value="UPSTREAM">
+                Upstream (BGP)
+              </option>
+              <option value="CORE">
+                Core Management
+              </option>
+              <option value="DISTRIBUSI">
+                Distribusi
+              </option>
+              <option value="WIRELESS">
+                Wireless PTP
+              </option>
+            </select>
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-sm font-medium font-mono">Router Brand</label>
+            <select
+              v-model="formData.routerBrand"
+              class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono"
+            >
+              <option value="MIKROTIK">
+                MikroTik
+              </option>
+              <option value="UBIVIQUITI">
+                Ubiquiti
+              </option>
+            </select>
+          </div>
+
+          <div class="space-y-2">
             <label class="text-sm font-medium font-mono">Status</label>
             <select
               v-model="formData.status"
@@ -272,14 +312,16 @@ async function handleSubmit() {
 .command-btn {
   font-family: 'IBM Plex Mono', monospace;
   font-weight: 500;
-  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
-  border: 1px solid hsl(var(--primary) / 0.3);
-  box-shadow: 0 2px 8px -2px hsl(var(--primary) / 0.3);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: 1px solid hsl(var(--primary));
+  box-shadow: 0 2px 8px -2px hsl(var(--foreground) / 0.15);
   transition: all 0.2s;
 }
 
 .command-btn:hover {
-  box-shadow: 0 4px 16px -4px hsl(var(--primary) / 0.4);
+  opacity: 0.9;
+  box-shadow: 0 4px 12px -2px hsl(var(--foreground) / 0.2);
   transform: translateY(-1px);
 }
 </style>

@@ -47,13 +47,13 @@ const selectedRouterId = ref<string>('')
 const isViewModalOpen = ref(false)
 const selectedConnection = ref<BGPConnection | null>(null)
 
-// Load routers on mount
+// Load BGP routers on mount
 onMounted(async () => {
-  await routerStore.fetchRouters()
+  await routerStore.fetchBgpRouters()
 
   // Auto-select first router if available
-  if (routerStore.routers.length > 0) {
-    selectedRouterId.value = routerStore.routers[0]?.id || ''
+  if (routerStore.bgpRouters.length > 0) {
+    selectedRouterId.value = routerStore.bgpRouters[0]?.id || ''
   }
 })
 
@@ -83,7 +83,7 @@ watch(() => routerStore.error, (newError) => {
 
 // Get selected router info
 const selectedRouter = computed(() => {
-  return routerStore.routers.find(r => r.id === selectedRouterId.value)
+  return routerStore.bgpRouters.find(r => r.id === selectedRouterId.value)
 })
 
 // Filtered connections based on search
@@ -310,7 +310,7 @@ const stats = computed(() => ({
               <SelectContent>
                 <SelectGroup>
                   <SelectItem
-                    v-for="router in routerStore.routers"
+                    v-for="router in routerStore.bgpRouters"
                     :key="router.id"
                     :value="router.id"
                   >

@@ -12,6 +12,9 @@ router.use(requireAdmin);
 // GET /api/routers - Get all routers
 router.get('/', routerController.getAll);
 
+// GET /api/routers/bgp - Get routers that support BGP (MikroTik + Upstream + Active)
+router.get('/bgp', routerController.getBgpRouters);
+
 // GET /api/routers/:id - Get router by ID
 router.get('/:id', routerController.getById);
 

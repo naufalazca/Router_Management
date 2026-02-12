@@ -20,6 +20,18 @@ enum RouterStatus {
   MAINTENANCE
 }
 
+enum RouterType {
+  UPSTREAM      // Router Upstream dengan BGP routing
+  CORE          // Router Core Management
+  DISTRIBUSI    // Router Pendistribusian Jaringan
+  WIRELESS      // Router Wireless PTP
+}
+
+enum RouterBrand {
+  MIKROTIK
+  UBIVIQUITI
+}
+
 enum UserRole {
   ADMIN
   USER
@@ -103,6 +115,8 @@ model Router {
   model       String?
   location    String?
   status      RouterStatus @default(ACTIVE)
+  routerType  RouterType @default(CORE) @map("router_type")
+  routerBrand RouterBrand @default(MIKROTIK) @map("router_brand")
   lastSeen    DateTime? @map("last_seen")
   companyId   String?  @map("company_id")
   username    String   @default("admin")

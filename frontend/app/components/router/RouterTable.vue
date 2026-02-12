@@ -5,6 +5,7 @@ import {
   Clock,
   Eye,
   MapPin,
+  Network,
   Pencil,
   Server,
   Trash2,
@@ -28,12 +29,14 @@ defineProps<{
   routers: Router[]
   isLoading: boolean
   searchQuery: string
+  testingRouterId: string | null
 }>()
 
 const emit = defineEmits<{
   view: [router: Router]
   edit: [router: Router]
   delete: [router: Router]
+  test: [router: Router]
 }>()
 
 // Status badge config
@@ -214,6 +217,17 @@ function formatDate(dateString: string | null | undefined) {
 
             <TableCell class="text-right">
               <div class="flex items-center justify-end gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="Test Connection"
+                  :disabled="testingRouterId === router.id"
+                  @click="emit('test', router)"
+                >
+                  <Network
+                    :class="['h-4 w-4', testingRouterId === router.id && 'animate-pulse']"
+                  />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"

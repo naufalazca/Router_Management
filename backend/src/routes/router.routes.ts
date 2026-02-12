@@ -27,4 +27,13 @@ router.put('/:id', routerController.update);
 // DELETE /api/routers/:id - Delete router
 router.delete('/:id', routerController.delete);
 
+// ==================== CONNECTION TEST ENDPOINTS ====================
+
+// GET /api/routers/:routerId/test - Test router connection (API, SSH, or BOTH based on query param)
+// Query: type=API|SSH|BOTH (default: BOTH)
+router.get('/:routerId/test', routerController.testConnection);
+
+// POST /api/routers/test/all - Test all active routers
+router.post('/test/all', routerController.testAllActiveRouters);
+
 export default router;

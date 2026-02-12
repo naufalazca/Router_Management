@@ -314,6 +314,39 @@ export const useRouterStore = defineStore('router', {
       }
     },
 
+    async testConnection(routerId: string, type: 'API' | 'SSH' | 'BOTH' = 'BOTH') {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const config = useRuntimeConfig()
+        const authStore = useAuthStore()
+        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+
+        const response = await $fetch<{ status: string, data: any }>(
+          `${apiBase}/routers/${routerId}/test?type=${type}`,
+          {
+            headers: {
+              Authorization: `Bearer ${authStore.token}`,
+            },
+          },
+        )
+
+        return { success: true, data: response.data }
+      }
+      catch (error: any) {
+        console.error('Test connection error:', error)
+        this.error = error?.data?.message || error?.message || 'Failed to test router connection'
+        return {
+          success: false,
+          error: this.error,
+        }
+      }
+      finally {
+        this.isLoading = false
+      }
+    },
+
     clearError() {
       this.error = null
     },

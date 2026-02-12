@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+export const routerIdParamSchema = z.object({
+  routerId: z.string().uuid('Invalid router ID'),
+});
+
 export const createRouterSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   ipAddress: z.string().ip('Invalid IP address'),

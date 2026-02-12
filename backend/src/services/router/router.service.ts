@@ -1,6 +1,6 @@
-import { prisma } from '../lib/prisma';
+import { prisma } from '../../lib/prisma';
 import { RouterStatus, RouterType, RouterBrand } from '@prisma/client';
-import { encrypt } from '../lib/encryption';
+import { encrypt } from '../../lib/encryption';
 
 interface CreateRouterData {
   name: string;

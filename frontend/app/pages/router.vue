@@ -15,6 +15,7 @@ import { useRouterStore } from '~/stores/router'
 
 const routerStore = useRouterStore()
 const searchQuery = ref('')
+const testingRouterId = ref<string | null>(null)
 
 // Watch for errors from store and show toast
 watch(() => routerStore.error, (newError) => {
@@ -93,6 +94,23 @@ function handleDeleteSuccess() {
   toast.success('Device deleted successfully')
 }
 
+// Handle test connection
+async function handleTestConnection(router: Router) {
+  testingRouterId.value = router.id
+  try {
+    const result = await routerStore.testConnection(router.id, 'BOTH')
+    if (result.success) {
+      toast.success('Connection test passed')
+    }
+    else {
+      toast.error(result.error || 'Connection test failed')
+    }
+  }
+  finally {
+    testingRouterId.value = null
+  }
+}
+
 // Stats
 const stats = computed(() => ({
   total: routerStore.routerCount,
@@ -157,9 +175,11 @@ const stats = computed(() => ({
       :routers="filteredRouters"
       :is-loading="routerStore.isLoading"
       :search-query="searchQuery"
+      :testing-router-id="testingRouterId"
       @view="openViewModal"
       @edit="openEditModal"
       @delete="openDeleteDialog"
+      @test="handleTestConnection"
     />
 
     <!-- Modals -->

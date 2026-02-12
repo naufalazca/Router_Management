@@ -36,8 +36,7 @@ Sistem manajemen untuk router MikroTik RouterOS yang memungkinkan monitoring, ko
 
 ## Prerequisites
 
-- Node.js >= 18.x
-- Docker & Docker Compose
+- Node.js >= 18.xd
 - npm atau yarn
 
 ## Quick Start
@@ -169,30 +168,6 @@ Router 1---* MonitoringLog
 Router 1---* AuditLog
 ```
 
-## API Endpoints (Planned)
-
-### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
-- `GET /api/auth/me` - Get current user
-
-### Routers
-- `GET /api/routers` - List all routers
-- `POST /api/routers` - Add new router
-- `GET /api/routers/:id` - Get router details
-- `PUT /api/routers/:id` - Update router
-- `DELETE /api/routers/:id` - Delete router
-- `POST /api/routers/:id/test` - Test connection
-
-### Monitoring
-- `GET /api/monitoring/:routerId` - Get monitoring data
-- `GET /api/monitoring/:routerId/realtime` - WebSocket endpoint
-
-### Configuration
-- `GET /api/configs/:routerId` - List configs
-- `POST /api/configs/:routerId/backup` - Backup config
-- `POST /api/configs/:routerId/restore` - Restore config
-
 ## Environment Variables
 
 ### Backend (.env)
@@ -248,16 +223,6 @@ npm run generate       # Generate static site
 npm run lint           # Run ESLint
 npm run lint:fix       # Fix ESLint errors
 ```
-
-## Production Deployment
-
-### Using Docker (Recommended)
-
-```bash
-# TODO: Add Dockerfile untuk backend dan frontend
-docker-compose -f docker-compose.prod.yml up -d
-```
-
 ### Manual Deployment
 
 ```bash
@@ -298,26 +263,6 @@ npm run generate
 ## License
 
 MIT
-
-## Roadmap
-
-- [x] Project setup
-- [x] Database schema design
-- [ ] Authentication module
-- [ ] Router CRUD operations
-- [ ] RouterOS API integration
-- [ ] Real-time monitoring
-- [ ] Configuration backup/restore
-- [ ] Dashboard UI
-- [ ] User management UI
-- [ ] Monitoring charts
-- [ ] Alert system
-- [ ] Email notifications
-- [ ] API documentation (Swagger)
-- [ ] Unit tests
-- [ ] E2E tests
-- [ ] Docker deployment
-- [ ] CI/CD pipeline
 
 ## Support
 

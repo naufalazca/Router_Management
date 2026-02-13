@@ -78,6 +78,11 @@ export const navMenu: NavMenu[] = [
     heading: 'Apps',
     items: [
       {
+        title: 'Topology',
+        icon: 'i-lucide-network',
+        link: '/topology',
+      },
+      {
         title: 'Kanban Board',
         icon: 'i-lucide-kanban',
         link: '/kanban',

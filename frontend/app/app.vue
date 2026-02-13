@@ -52,7 +52,7 @@ const router = useRouter()
 
 defineShortcuts({
   'G-H': () => router.push('/'),
-  'G-E': () => router.push('/email'),
+  'G-E': () => router.push('/email')
 })
 
 const textDirection = useTextDirection({ initialValue: 'ltr' })

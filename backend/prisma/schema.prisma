@@ -21,10 +21,10 @@ enum RouterStatus {
 }
 
 enum RouterType {
-  UPSTREAM      // Router Upstream dengan BGP routing
-  CORE          // Router Core Management
-  DISTRIBUSI    // Router Pendistribusian Jaringan
-  WIRELESS      // Router Wireless PTP
+  UPSTREAM // Router Upstream dengan BGP routing
+  CORE // Router Core Management
+  DISTRIBUSI // Router Pendistribusian Jaringan
+  WIRELESS // Router Wireless PTP
 }
 
 enum RouterBrand {
@@ -39,36 +39,36 @@ enum UserRole {
 }
 
 enum BackupType {
-  EXPORT          // .rsc text-based export config
-  BINARY          // .backup binary format (future)
-  PARTIAL         // Partial configuration (future)
+  EXPORT // .rsc text-based export config
+  BINARY // .backup binary format (future)
+  PARTIAL // Partial configuration (future)
 }
 
 enum BackupStatus {
-  PENDING         // Backup queued or in progress
-  COMPLETED       // Successfully uploaded to R2
-  FAILED          // Backup process failed
-  EXPIRED         // Marked for deletion by retention policy
+  PENDING // Backup queued or in progress
+  COMPLETED // Successfully uploaded to R2
+  FAILED // Backup process failed
+  EXPIRED // Marked for deletion by retention policy
 }
 
 enum TriggerType {
-  MANUAL          // User-triggered via dashboard
-  SCHEDULED       // Auto-scheduled backup (cron)
-  PRE_UPDATE      // Before RouterOS update (future)
+  MANUAL // User-triggered via dashboard
+  SCHEDULED // Auto-scheduled backup (cron)
+  PRE_UPDATE // Before RouterOS update (future)
 }
 
 enum RestoreStatus {
-  PENDING         // Restore queued
-  IN_PROGRESS     // Restore in progress
-  COMPLETED       // Successfully restored
-  FAILED          // Restore failed
-  ROLLED_BACK     // Restore rolled back to safety backup
+  PENDING // Restore queued
+  IN_PROGRESS // Restore in progress
+  COMPLETED // Successfully restored
+  FAILED // Restore failed
+  ROLLED_BACK // Restore rolled back to safety backup
 }
 
 enum RestoreType {
-  FULL            // Full configuration restore
-  PREVIEW         // Dry-run/preview only (no actual restore)
-  PARTIAL         // Restore specific sections (future)
+  FULL // Full configuration restore
+  PREVIEW // Dry-run/preview only (no actual restore)
+  PARTIAL // Restore specific sections (future)
 }
 
 enum TaskPriority {
@@ -99,8 +99,21 @@ enum TaskActivityAction {
 }
 
 enum TimeEntryType {
-  TIMER           // Start/stop timer
-  MANUAL          // Manual input
+  TIMER // Start/stop timer
+  MANUAL // Manual input
+}
+
+enum LinkType {
+  ETHERNET // Kabel Ethernet
+  FIBER // Kabel Fiber Optic
+  WIRELESS // Wireless link (PTP/PTMP)
+  VPN // VPN Tunnel
+}
+
+enum LinkStatus {
+  ACTIVE // Link aktif
+  INACTIVE // Link down
+  PLANNED // Rencana deployment
 }
 
 // ==========================================
@@ -108,31 +121,104 @@ enum TimeEntryType {
 // ==========================================
 
 model Router {
-  id          String   @id @default(uuid())
+  id          String       @id @default(uuid())
   name        String
-  ipAddress   String   @map("ip_address")
-  macAddress  String?  @map("mac_address")
+  ipAddress   String       @map("ip_address")
+  macAddress  String?      @map("mac_address")
   model       String?
   location    String?
   status      RouterStatus @default(ACTIVE)
-  routerType  RouterType @default(CORE) @map("router_type")
-  routerBrand RouterBrand @default(MIKROTIK) @map("router_brand")
-  lastSeen    DateTime? @map("last_seen")
-  companyId   String?  @map("company_id")
-  username    String   @default("admin")
-  password    String   @default("") // Encrypted with AES-256-GCM
-  apiPort     Int?     @default(8728) @map("api_port")
-  sshPort     Int?     @default(22) @map("ssh_port")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  routerType  RouterType   @default(CORE) @map("router_type")
+  routerBrand RouterBrand  @default(MIKROTIK) @map("router_brand")
+  lastSeen    DateTime?    @map("last_seen")
+  companyId   String?      @map("company_id")
+  username    String       @default("admin")
+  password    String       @default("") // Encrypted with AES-256-GCM
+  apiPort     Int?         @default(8728) @map("api_port")
+  sshPort     Int?         @default(22) @map("ssh_port")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
 
-  company         Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company         Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   backups         RouterBackup[]
   backupSchedules BackupSchedule[]
   restoreHistory  BackupRestore[]
-  tasks           Task[]  // Kanban tasks linked to this router
+  tasks           Task[] // Kanban tasks linked to this router
+  topologyLayouts TopologyLayout[] // Topology positions for this router
+
+  // Topology Relations
+  connectionsAsSource RouterConnection[] @relation("RouterConnectionsSource")
+  connectionsAsTarget RouterConnection[] @relation("RouterConnectionsTarget")
 
   @@map("routers")
+}
+
+// ==========================================
+// ROUTER CONNECTIONS (TOPOLOGY)
+// ==========================================
+
+model RouterConnection {
+  id             String  @id @default(uuid())
+  sourceRouterId String  @map("source_router_id") // Router A
+  targetRouterId String  @map("target_router_id") // Router B
+  companyId      String? @map("company_id") // Company ownership (optional)
+
+  // Connection Details
+  linkType   LinkType   @default(ETHERNET)
+  linkStatus LinkStatus @default(ACTIVE)
+
+  // Interface Information
+  sourceInterface String? @map("source_interface") // Interface di Router A (mis: ether1)
+  targetInterface String? @map("target_interface") // Interface di Router B (mis: ether2)
+
+  // Link Properties
+  bandwidth String? // Bandwidth kapasitas (mis: "1Gbps", "100Mbps")
+  distance  Decimal? @db.Decimal(10, 2) // Jarak dalam meter (untuk wireless)
+
+  // Auto-discovery flag
+  isAutoDiscovered Boolean @default(false) @map("is_auto_discovered")
+
+  // Metadata
+  notes String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  sourceRouter Router   @relation("RouterConnectionsSource", fields: [sourceRouterId], references: [id], onDelete: Cascade)
+  targetRouter Router   @relation("RouterConnectionsTarget", fields: [targetRouterId], references: [id], onDelete: Cascade)
+  company      Company? @relation("RouterConnectionsCompany", fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([sourceRouterId])
+  @@index([targetRouterId])
+  @@index([companyId])
+  @@index([linkStatus])
+  @@map("router_connections")
+}
+
+// ==========================================
+// TOPOLOGY LAYOUT
+// ==========================================
+
+model TopologyLayout {
+  id        String  @id @default(uuid())
+  routerId  String  @map("router_id")
+  companyId String? @map("company_id") // Null = global layout
+
+  // Node position in topology view
+  positionX Decimal @map("position_x") @db.Decimal(10, 2)
+  positionY Decimal @map("position_y") @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  router  Router   @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  company Company? @relation("TopologyLayoutCompany", fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, routerId])
+  @@index([companyId])
+  @@map("topology_layouts")
 }
 
 // ==========================================
@@ -140,19 +226,21 @@ model Router {
 // ==========================================
 
 model Company {
-  id              String   @id @default(uuid())
-  name            String   @unique
-  code            String   @unique
-  address         String
-  description     String?
-  logo            String?
-  masterUsername  String   @map("master_username")
-  masterPassword  String   @map("master_password") // Encrypted with AES-256-GCM
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  name           String   @unique
+  code           String   @unique
+  address        String
+  description    String?
+  logo           String?
+  masterUsername String   @map("master_username")
+  masterPassword String   @map("master_password") // Encrypted with AES-256-GCM
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   routers         Router[]
+  connections     RouterConnection[] @relation("RouterConnectionsCompany")
   backupSchedules BackupSchedule[]
+  topologyLayouts TopologyLayout[] @relation("TopologyLayoutCompany")
 
   @@map("companies")
 }
@@ -164,7 +252,7 @@ model Company {
 model User {
   id        String   @id @default(uuid())
   username  String   @unique
-  password  String   // Will store hashed password
+  password  String // Will store hashed password
   email     String?  @unique
   fullName  String?  @map("full_name")
   role      UserRole @default(USER)
@@ -173,12 +261,12 @@ model User {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Kanban Relations
-  boards              Board[]
-  createdTasks        Task[]              @relation("TaskCreator")
-  taskComments        TaskComment[]
-  taskActivities      TaskActivity[]
-  taskAttachments     TaskAttachment[]
-  taskTimeEntries     TaskTimeEntry[]
+  boards          Board[]
+  createdTasks    Task[]           @relation("TaskCreator")
+  taskComments    TaskComment[]
+  taskActivities  TaskActivity[]
+  taskAttachments TaskAttachment[]
+  taskTimeEntries TaskTimeEntry[]
 
   @@map("users")
 }
@@ -188,110 +276,110 @@ model User {
 // ==========================================
 
 model RouterBackup {
-  id              String        @id @default(uuid())
-  routerId        String        @map("router_id")
-  backupType      BackupType    @default(EXPORT) @map("backup_type")
+  id         String     @id @default(uuid())
+  routerId   String     @map("router_id")
+  backupType BackupType @default(EXPORT) @map("backup_type")
 
   // R2 Storage Information
-  storageKey      String        @map("storage_key")        // R2 path: backups/{routerId}/{timestamp}.rsc
-  storageUrl      String?       @map("storage_url")        // Presigned URL (temporary)
-  fileSize        BigInt        @map("file_size")          // File size in bytes
-  checksum        String                                   // SHA256 hash for integrity
+  storageKey String  @map("storage_key") // R2 path: backups/{routerId}/{timestamp}.rsc
+  storageUrl String? @map("storage_url") // Presigned URL (temporary)
+  fileSize   BigInt  @map("file_size") // File size in bytes
+  checksum   String // SHA256 hash for integrity
 
   // Backup Metadata
-  routerVersion   String?       @map("router_version")     // RouterOS version at backup time
-  backupStatus    BackupStatus  @default(PENDING) @map("backup_status")
-  triggerType     TriggerType   @map("trigger_type")       // MANUAL or SCHEDULED
-  triggeredBy     String?       @map("triggered_by")       // User ID if manual trigger
+  routerVersion String?      @map("router_version") // RouterOS version at backup time
+  backupStatus  BackupStatus @default(PENDING) @map("backup_status")
+  triggerType   TriggerType  @map("trigger_type") // MANUAL or SCHEDULED
+  triggeredBy   String?      @map("triggered_by") // User ID if manual trigger
 
   // Configuration Summary (JSON)
-  configSummary   Json?         @map("config_summary")     // { interfaces: 10, firewall_rules: 45, users: 3, etc }
+  configSummary Json? @map("config_summary") // { interfaces: 10, firewall_rules: 45, users: 3, etc }
 
   // Pin Feature - Protect from auto-deletion
-  isPinned        Boolean       @default(false) @map("is_pinned")
-  pinnedBy        String?       @map("pinned_by")          // User ID who pinned
-  pinnedAt        DateTime?     @map("pinned_at")
-  pinnedReason    String?       @map("pinned_reason")      // Optional note why pinned
+  isPinned     Boolean   @default(false) @map("is_pinned")
+  pinnedBy     String?   @map("pinned_by") // User ID who pinned
+  pinnedAt     DateTime? @map("pinned_at")
+  pinnedReason String?   @map("pinned_reason") // Optional note why pinned
 
   // Safety Backup Flag
-  isSafetyBackup  Boolean       @default(false) @map("is_safety_backup") // Pre-restore backup
+  isSafetyBackup Boolean @default(false) @map("is_safety_backup") // Pre-restore backup
 
   // Timestamps
-  createdAt       DateTime      @default(now()) @map("created_at")
-  completedAt     DateTime?     @map("completed_at")
-  expiresAt       DateTime?     @map("expires_at")         // For retention policy (null if pinned)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
+  expiresAt   DateTime? @map("expires_at") // For retention policy (null if pinned)
 
   // Relations
-  router          Router        @relation(fields: [routerId], references: [id], onDelete: Cascade)
-  restoreHistory  BackupRestore[]
+  router         Router          @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  restoreHistory BackupRestore[]
 
-  @@map("router_backups")
   @@index([routerId, createdAt])
   @@index([backupStatus])
   @@index([expiresAt])
   @@index([isPinned])
+  @@map("router_backups")
 }
 
 model BackupSchedule {
-  id              String    @id @default(uuid())
-  routerId        String?   @map("router_id")          // Null = apply to all routers in company
-  companyId       String?   @map("company_id")         // Company-level schedule
+  id        String  @id @default(uuid())
+  routerId  String? @map("router_id") // Null = apply to all routers in company
+  companyId String? @map("company_id") // Company-level schedule
 
   // Schedule Configuration
-  isEnabled       Boolean   @default(true) @map("is_enabled")
-  cronExpression  String    @map("cron_expression")    // e.g., "0 2 * * *" (daily at 2 AM)
-  timezone        String    @default("UTC")
+  isEnabled      Boolean @default(true) @map("is_enabled")
+  cronExpression String  @map("cron_expression") // e.g., "0 2 * * *" (daily at 2 AM)
+  timezone       String  @default("UTC")
 
   // Retention Policy (7-4-12 strategy)
-  retentionDays   Int       @default(7) @map("retention_days")      // Keep daily backups for 7 days
-  retentionWeeks  Int       @default(4) @map("retention_weeks")     // Keep weekly backups for 4 weeks
-  retentionMonths Int       @default(12) @map("retention_months")   // Keep monthly backups for 12 months
+  retentionDays   Int @default(7) @map("retention_days") // Keep daily backups for 7 days
+  retentionWeeks  Int @default(4) @map("retention_weeks") // Keep weekly backups for 4 weeks
+  retentionMonths Int @default(12) @map("retention_months") // Keep monthly backups for 12 months
 
   // Schedule Metadata
-  lastRunAt       DateTime? @map("last_run_at")
-  nextRunAt       DateTime? @map("next_run_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  lastRunAt DateTime? @map("last_run_at")
+  nextRunAt DateTime? @map("next_run_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  router          Router?   @relation(fields: [routerId], references: [id], onDelete: Cascade)
-  company         Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  router  Router?  @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  @@map("backup_schedules")
   @@index([routerId])
   @@index([companyId])
   @@index([nextRunAt])
+  @@map("backup_schedules")
 }
 
 model BackupRestore {
-  id              String        @id @default(uuid())
-  backupId        String        @map("backup_id")
-  routerId        String        @map("router_id")
+  id       String @id @default(uuid())
+  backupId String @map("backup_id")
+  routerId String @map("router_id")
 
   // Restore Information
-  restoreStatus   RestoreStatus @default(PENDING) @map("restore_status")
-  restoredBy      String        @map("restored_by")        // User ID
-  restoreType     RestoreType   @default(FULL) @map("restore_type")
+  restoreStatus RestoreStatus @default(PENDING) @map("restore_status")
+  restoredBy    String        @map("restored_by") // User ID
+  restoreType   RestoreType   @default(FULL) @map("restore_type")
 
   // Safety Backup Created Before Restore
-  safetyBackupId  String?       @map("safety_backup_id")   // ID of auto-created backup before restore
+  safetyBackupId String? @map("safety_backup_id") // ID of auto-created backup before restore
 
   // Restore Results
-  errorMessage    String?       @map("error_message")
-  restoreLog      String?       @map("restore_log")        // RouterOS command output
+  errorMessage String? @map("error_message")
+  restoreLog   String? @map("restore_log") // RouterOS command output
 
   // Timestamps
-  createdAt       DateTime      @default(now()) @map("created_at")
-  completedAt     DateTime?     @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
 
   // Relations
-  backup          RouterBackup  @relation(fields: [backupId], references: [id], onDelete: Cascade)
-  router          Router        @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  backup RouterBackup @relation(fields: [backupId], references: [id], onDelete: Cascade)
+  router Router       @relation(fields: [routerId], references: [id], onDelete: Cascade)
 
-  @@map("backup_restores")
   @@index([backupId])
   @@index([routerId])
   @@index([createdAt])
+  @@map("backup_restores")
 }
 
 // ==========================================
@@ -299,218 +387,218 @@ model BackupRestore {
 // ==========================================
 
 model Board {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
+  id     String @id @default(uuid())
+  userId String @map("user_id")
 
   name        String
   description String?
-  color       String?  // Hex color untuk visual
-  icon        String?  // Emoji atau icon name
-  position    Int      // Urutan board (untuk sorting)
-  isArchived  Boolean  @default(false) @map("is_archived")
-
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lists       BoardList[]
-  labels      Label[]
-
-  @@map("boards")
-  @@index([userId])
-  @@index([userId, position])
-}
-
-model BoardList {
-  id         String   @id @default(uuid())
-  boardId    String   @map("board_id")
-
-  name       String
-  position   Int      // Urutan kolom
-  color      String?  // Optional color untuk kolom
-  isArchived Boolean  @default(false) @map("is_archived")
-
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-
-  board      Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  tasks      Task[]
-
-  @@map("board_lists")
-  @@index([boardId, position])
-}
-
-model Task {
-  id             String        @id @default(uuid())
-  listId         String        @map("list_id")
-  createdBy      String        @map("created_by")
-
-  title          String
-  description    String?       @db.Text  // Support markdown
-  position       Int           // Urutan dalam list
-  priority       TaskPriority  @default(MEDIUM)
-
-  // Dates
-  dueDate        DateTime?     @map("due_date")
-  startDate      DateTime?     @map("start_date")
-  completedAt    DateTime?     @map("completed_at")
-
-  // Time Tracking
-  estimatedHours Decimal?      @map("estimated_hours") @db.Decimal(10, 2)
-
-  // Router Integration (Optional)
-  routerId       String?       @map("router_id")
-
-  isArchived     Boolean       @default(false) @map("is_archived")
-
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-
-  list           BoardList     @relation(fields: [listId], references: [id], onDelete: Cascade)
-  creator        User          @relation("TaskCreator", fields: [createdBy], references: [id])
-  router         Router?       @relation(fields: [routerId], references: [id], onDelete: SetNull)
-
-  taskLabels     TaskLabel[]
-  comments       TaskComment[]
-  attachments    TaskAttachment[]
-  activities     TaskActivity[]
-  timeEntries    TaskTimeEntry[]
-
-  @@map("tasks")
-  @@index([listId, position])
-  @@index([createdBy])
-  @@index([routerId])
-  @@index([dueDate])
-}
-
-model Label {
-  id         String   @id @default(uuid())
-  boardId    String   @map("board_id")
-
-  name       String
-  color      String   // Hex color
-
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-
-  board      Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  taskLabels TaskLabel[]
-
-  @@map("labels")
-  @@unique([boardId, name]) // Prevent duplicate label names in same board
-  @@index([boardId])
-}
-
-model TaskLabel {
-  id        String   @id @default(uuid())
-  taskId    String   @map("task_id")
-  labelId   String   @map("label_id")
-
-  createdAt DateTime @default(now()) @map("created_at")
-
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  label     Label    @relation(fields: [labelId], references: [id], onDelete: Cascade)
-
-  @@map("task_labels")
-  @@unique([taskId, labelId]) // Prevent duplicate labels on same task
-  @@index([taskId])
-  @@index([labelId])
-}
-
-model TaskAttachment {
-  id          String   @id @default(uuid())
-  taskId      String   @map("task_id")
-  uploadedBy  String   @map("uploaded_by")
-
-  // File Information
-  fileName    String   @map("file_name")
-  fileSize    BigInt   @map("file_size")      // Bytes
-  mimeType    String   @map("mime_type")      // image/png, application/pdf, etc
-
-  // R2 Storage
-  storageKey  String   @map("storage_key")    // R2 path: kanban/{taskId}/{timestamp}_{filename}
-  checksum    String                          // SHA256 hash untuk integrity
-
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  uploader    User     @relation(fields: [uploadedBy], references: [id])
-
-  @@map("task_attachments")
-  @@index([taskId])
-  @@index([uploadedBy])
-}
-
-model TaskComment {
-  id        String   @id @default(uuid())
-  taskId    String   @map("task_id")
-  userId    String   @map("user_id")
-
-  content   String   @db.Text  // Markdown format
-
-  isEdited  Boolean  @default(false) @map("is_edited")
-  editedAt  DateTime? @map("edited_at")
+  color       String? // Hex color untuk visual
+  icon        String? // Emoji atau icon name
+  position    Int // Urutan board (untuk sorting)
+  isArchived  Boolean @default(false) @map("is_archived")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id])
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lists  BoardList[]
+  labels Label[]
 
-  @@map("task_comments")
+  @@index([userId])
+  @@index([userId, position])
+  @@map("boards")
+}
+
+model BoardList {
+  id      String @id @default(uuid())
+  boardId String @map("board_id")
+
+  name       String
+  position   Int // Urutan kolom
+  color      String? // Optional color untuk kolom
+  isArchived Boolean @default(false) @map("is_archived")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@index([boardId, position])
+  @@map("board_lists")
+}
+
+model Task {
+  id        String @id @default(uuid())
+  listId    String @map("list_id")
+  createdBy String @map("created_by")
+
+  title       String
+  description String?      @db.Text // Support markdown
+  position    Int // Urutan dalam list
+  priority    TaskPriority @default(MEDIUM)
+
+  // Dates
+  dueDate     DateTime? @map("due_date")
+  startDate   DateTime? @map("start_date")
+  completedAt DateTime? @map("completed_at")
+
+  // Time Tracking
+  estimatedHours Decimal? @map("estimated_hours") @db.Decimal(10, 2)
+
+  // Router Integration (Optional)
+  routerId String? @map("router_id")
+
+  isArchived Boolean @default(false) @map("is_archived")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  list    BoardList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  creator User      @relation("TaskCreator", fields: [createdBy], references: [id])
+  router  Router?   @relation(fields: [routerId], references: [id], onDelete: SetNull)
+
+  taskLabels  TaskLabel[]
+  comments    TaskComment[]
+  attachments TaskAttachment[]
+  activities  TaskActivity[]
+  timeEntries TaskTimeEntry[]
+
+  @@index([listId, position])
+  @@index([createdBy])
+  @@index([routerId])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+model Label {
+  id      String @id @default(uuid())
+  boardId String @map("board_id")
+
+  name  String
+  color String // Hex color
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  board      Board       @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  taskLabels TaskLabel[]
+
+  @@unique([boardId, name]) // Prevent duplicate label names in same board
+  @@index([boardId])
+  @@map("labels")
+}
+
+model TaskLabel {
+  id      String @id @default(uuid())
+  taskId  String @map("task_id")
+  labelId String @map("label_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task  Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, labelId]) // Prevent duplicate labels on same task
+  @@index([taskId])
+  @@index([labelId])
+  @@map("task_labels")
+}
+
+model TaskAttachment {
+  id         String @id @default(uuid())
+  taskId     String @map("task_id")
+  uploadedBy String @map("uploaded_by")
+
+  // File Information
+  fileName String @map("file_name")
+  fileSize BigInt @map("file_size") // Bytes
+  mimeType String @map("mime_type") // image/png, application/pdf, etc
+
+  // R2 Storage
+  storageKey String @map("storage_key") // R2 path: kanban/{taskId}/{timestamp}_{filename}
+  checksum   String // SHA256 hash untuk integrity
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task     Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploader User @relation(fields: [uploadedBy], references: [id])
+
+  @@index([taskId])
+  @@index([uploadedBy])
+  @@map("task_attachments")
+}
+
+model TaskComment {
+  id     String @id @default(uuid())
+  taskId String @map("task_id")
+  userId String @map("user_id")
+
+  content String @db.Text // Markdown format
+
+  isEdited Boolean   @default(false) @map("is_edited")
+  editedAt DateTime? @map("edited_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
   @@index([taskId])
   @@index([userId])
+  @@map("task_comments")
 }
 
 model TaskActivity {
-  id           String              @id @default(uuid())
-  taskId       String              @map("task_id")
-  userId       String              @map("user_id")
+  id     String @id @default(uuid())
+  taskId String @map("task_id")
+  userId String @map("user_id")
 
-  action       TaskActivityAction
+  action TaskActivityAction
 
   // Field change tracking
-  fieldChanged String?             @map("field_changed")  // "title", "dueDate", "priority", etc
-  oldValue     Json?               @map("old_value")
-  newValue     Json?               @map("new_value")
+  fieldChanged String? @map("field_changed") // "title", "dueDate", "priority", etc
+  oldValue     Json?   @map("old_value")
+  newValue     Json?   @map("new_value")
 
   // Additional context
-  metadata     Json?               // Extra data: { listName: "Done", fromList: "In Progress" }
+  metadata Json? // Extra data: { listName: "Done", fromList: "In Progress" }
 
-  createdAt    DateTime            @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  task         Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user         User                @relation(fields: [userId], references: [id])
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
 
-  @@map("task_activities")
   @@index([taskId, createdAt])
   @@index([userId])
+  @@map("task_activities")
 }
 
 model TaskTimeEntry {
-  id          String         @id @default(uuid())
-  taskId      String         @map("task_id")
-  userId      String         @map("user_id")
+  id     String @id @default(uuid())
+  taskId String @map("task_id")
+  userId String @map("user_id")
 
-  entryType   TimeEntryType  @default(TIMER) @map("entry_type")
+  entryType TimeEntryType @default(TIMER) @map("entry_type")
 
   // Timer-based
-  startTime   DateTime?      @map("start_time")
-  endTime     DateTime?      @map("end_time")      // Null if timer still running
+  startTime DateTime? @map("start_time")
+  endTime   DateTime? @map("end_time") // Null if timer still running
 
   // Duration (calculated for timer, manual input for manual)
-  duration    Int            // In seconds
+  duration Int // In seconds
 
-  description String?        @db.Text  // Catatan apa yang dikerjakan
+  description String? @db.Text // Catatan apa yang dikerjakan
 
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  task        Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user        User           @relation(fields: [userId], references: [id])
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
 
-  @@map("task_time_entries")
   @@index([taskId])
   @@index([userId])
   @@index([startTime])
+  @@map("task_time_entries")
 }

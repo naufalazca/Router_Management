@@ -86,13 +86,13 @@ export class RouterLayoutService {
     }
 
     // Use the router's companyId if not provided
-    const effectiveCompanyId = companyId || router.companyId;
+    const effectiveCompanyId = companyId || router.companyId || null;
 
     // @ts-ignore
     return await prisma.topologyLayout.upsert({
       where: {
         companyId_routerId: {
-          companyId: effectiveCompanyId || null,
+          companyId: effectiveCompanyId as string,
           routerId
         }
       },

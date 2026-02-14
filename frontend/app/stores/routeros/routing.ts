@@ -187,9 +187,9 @@ export const useRouterOSRoutingStore = defineStore('routerosRouting', {
     /**
      * Get unique AS numbers from connections
      */
-    uniqueRemoteAs: state => {
+    uniqueRemoteAs: (state) => {
       const asSet = new Set<string>()
-      state.connections.forEach(c => {
+      state.connections.forEach((c) => {
         if (c.remoteAs)
           asSet.add(c.remoteAs)
       })

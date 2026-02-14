@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Company, CompanyRouter } from '~/stores/company'
+import type { Company } from '~/stores/company'
 import {
   Building2,
   CheckCircle2,
@@ -113,7 +113,7 @@ async function fetchRouters() {
       toast.error(result.error || 'Failed to load routers')
     }
   }
-  catch (error) {
+  catch {
     toast.error('An unexpected error occurred')
   }
   finally {

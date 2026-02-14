@@ -77,7 +77,7 @@ async function handleSubmit() {
       toast.error(result.error || 'Failed to create user')
     }
   }
-  catch (error) {
+  catch {
     toast.error('An unexpected error occurred')
   }
   finally {

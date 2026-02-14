@@ -67,7 +67,7 @@ export interface UpdateRouterInput {
 
 interface RouterState {
   routers: Router[]
-  bgpRouters: Router[]  // Routers that support BGP (MikroTik + Upstream + Active)
+  bgpRouters: Router[] // Routers that support BGP (MikroTik + Upstream + Active)
   currentRouter: Router | null
   isLoading: boolean
   error: string | null

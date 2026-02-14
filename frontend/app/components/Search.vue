@@ -2,14 +2,8 @@
 import type { NavGroup, NavMenu } from '~/types/nav'
 import { navMenu } from '@/constants/menus'
 
-const { metaSymbol } = useShortcuts()
-
 const openCommand = ref(false)
 const router = useRouter()
-
-defineShortcuts({
-  Meta_K: () => openCommand.value = true,
-})
 
 const componentsNav = computed<NavGroup | undefined>(() => {
   return navMenu

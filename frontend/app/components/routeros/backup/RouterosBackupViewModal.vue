@@ -10,7 +10,7 @@ import {
 } from '~/components/ui/dialog'
 import { Separator } from '~/components/ui/separator'
 
-const props = defineProps<{
+defineProps<{
   open: boolean
   backup: RouterBackup
 }>()

@@ -54,7 +54,7 @@ const statusConfig = {
 }
 
 // Router Type badge config
-const routerTypeConfig: Record<string, { label: string; color: string; bgColor: string }> = {
+const routerTypeConfig: Record<string, { label: string, color: string, bgColor: string }> = {
   UPSTREAM: { label: 'Upstream (BGP)', color: 'text-white dark:text-violet-300', bgColor: 'bg-violet-600 dark:bg-violet-500/20 border-violet-600 dark:border-violet-500/30' },
   CORE: { label: 'Core Management', color: 'text-white dark:text-blue-300', bgColor: 'bg-blue-600 dark:bg-blue-500/20 border-blue-600 dark:border-blue-500/30' },
   DISTRIBUSI: { label: 'Distribusi', color: 'text-white dark:text-orange-300', bgColor: 'bg-orange-600 dark:bg-orange-500/20 border-orange-600 dark:border-orange-500/30' },
@@ -62,7 +62,7 @@ const routerTypeConfig: Record<string, { label: string; color: string; bgColor: 
 }
 
 // Router Brand badge config
-const routerBrandConfig: Record<string, { label: string; color: string; bgColor: string }> = {
+const routerBrandConfig: Record<string, { label: string, color: string, bgColor: string }> = {
   MIKROTIK: { label: 'MikroTik', color: 'text-white dark:text-sky-300', bgColor: 'bg-sky-600 dark:bg-sky-500/20 border-sky-600 dark:border-sky-500/30' },
   UBIVIQUITI: { label: 'Ubiquiti', color: 'text-white dark:text-teal-300', bgColor: 'bg-teal-600 dark:bg-teal-500/20 border-teal-600 dark:border-teal-500/30' },
 }
@@ -122,16 +122,15 @@ function formatDate(dateString: string | null | undefined) {
                   Status
                 </div>
                 <Badge
+                  class="status-badge border font-medium font-mono text-xs gap-1.5"
                   :class="[
                     statusConfig[props.router.status].bgColor,
                     statusConfig[props.router.status].color,
-                    'border font-medium'
                   ]"
-                  class="status-badge font-mono text-xs gap-1.5"
                 >
                   <component
                     :is="statusConfig[props.router.status].icon"
-                    class="h-3 w-3"
+                    class="h-4 w-4"
                   />
                   {{ props.router.status }}
                 </Badge>
@@ -145,12 +144,11 @@ function formatDate(dateString: string | null | undefined) {
                 </div>
                 <Badge
                   v-if="routerTypeConfig[props.router.routerType]"
+                  class="status-badge border font-medium font-mono text-xs"
                   :class="[
                     routerTypeConfig[props.router.routerType].bgColor,
                     routerTypeConfig[props.router.routerType].color,
-                    'border font-medium'
                   ]"
-                  class="status-badge font-mono text-xs"
                 >
                   {{ routerTypeConfig[props.router.routerType].label }}
                 </Badge>
@@ -164,12 +162,11 @@ function formatDate(dateString: string | null | undefined) {
                 </div>
                 <Badge
                   v-if="routerBrandConfig[props.router.routerBrand]"
+                  class="status-badge border font-medium font-mono text-xs"
                   :class="[
                     routerBrandConfig[props.router.routerBrand].bgColor,
                     routerBrandConfig[props.router.routerBrand].color,
-                    'border font-medium'
                   ]"
-                  class="status-badge font-mono text-xs"
                 >
                   {{ routerBrandConfig[props.router.routerBrand].label }}
                 </Badge>

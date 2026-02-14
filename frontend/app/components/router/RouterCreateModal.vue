@@ -95,7 +95,7 @@ async function handleSubmit() {
       toast.error(result.error || 'Failed to create router')
     }
   }
-  catch (error) {
+  catch {
     toast.error('An unexpected error occurred')
   }
   finally {

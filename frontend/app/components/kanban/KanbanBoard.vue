@@ -9,7 +9,10 @@ import {
   parseAbsoluteToLocal,
 } from '@internationalized/date'
 import Draggable from 'vuedraggable'
-import { useKanbanAttachmentStore, useKanbanListStore, useKanbanStore, useKanbanTaskStore } from '~/stores/kanban'
+import { useKanbanStore } from '~/stores/kanban'
+import { useKanbanAttachmentStore } from '~/stores/kanban-attachment'
+import { useKanbanListStore } from '~/stores/kanban-list'
+import { useKanbanTaskStore } from '~/stores/kanban-task'
 import CardFooter from '../ui/card/CardFooter.vue'
 
 const kanbanStore = useKanbanStore()
@@ -265,6 +268,9 @@ async function onUpdateColumn(evt: any, id: string) {
   })
 }
 
+// Load tasks for a specific list
+const listTasks = ref<Record<string, ApiTask[]>>({})
+
 function updateListTasks(listId: string, newValue: ApiTask[]) {
   // Update local state immediately for smooth UI
   listTasks.value[listId] = newValue
@@ -329,9 +335,6 @@ async function removeTask(listId: string, taskId: string) {
   await taskStore.deleteTask(kanbanStore.selectedBoardId, listId, taskId)
   await loadTasksForList(listId)
 }
-
-// Load tasks for a specific list
-const listTasks = ref<Record<string, ApiTask[]>>({})
 
 async function loadTasksForList(listId: string) {
   if (!kanbanStore.selectedBoardId)
@@ -680,8 +683,12 @@ function isCompletedList(listName: string): boolean {
             <div class="flex items-center gap-2">
               <Icon name="lucide:paperclip" class="text-muted-foreground" />
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium truncate">{{ selectedFile.name }}</p>
-                <p class="text-xs text-muted-foreground">{{ formatFileSize(selectedFile.size) }}</p>
+                <p class="text-sm font-medium truncate">
+                  {{ selectedFile.name }}
+                </p>
+                <p class="text-xs text-muted-foreground">
+                  {{ formatFileSize(selectedFile.size) }}
+                </p>
               </div>
             </div>
             <p class="text-xs text-muted-foreground mt-2">
@@ -734,8 +741,12 @@ function isCompletedList(listName: string): boolean {
                   class="flex-shrink-0 text-muted-foreground"
                 />
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm truncate">{{ attachment.fileName }}</p>
-                  <p class="text-xs text-muted-foreground">{{ formatFileSize(Number(attachment.fileSize)) }}</p>
+                  <p class="text-sm truncate">
+                    {{ attachment.fileName }}
+                  </p>
+                  <p class="text-xs text-muted-foreground">
+                    {{ formatFileSize(Number(attachment.fileSize)) }}
+                  </p>
                 </div>
               </div>
               <div class="flex items-center gap-1">

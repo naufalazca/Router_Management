@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { VueFlow, type Node, type Edge, type Connection, Position, MarkerType, useVueFlow } from '@vue-flow/core'
-import { Controls } from '@vue-flow/controls'
+import type { Connection, Edge, Node } from '@vue-flow/core'
+import type { TopologyEdge, TopologyNode } from '~/stores/router/router.topology'
 import { Background } from '@vue-flow/background'
-import type { TopologyNode, TopologyEdge } from '~/stores/router/router.topology'
+import { Controls } from '@vue-flow/controls'
+import { useVueFlow, VueFlow } from '@vue-flow/core'
+import { computed, ref, watch } from 'vue'
 import { useTopologyStore } from '~/stores/router/router.topology'
 
 // Props
@@ -17,7 +18,7 @@ const props = defineProps<Props>()
 
 // Emit
 const emit = defineEmits<{
-  'connection-created': []
+  connectionCreated: []
 }>()
 
 // Store
@@ -59,18 +60,18 @@ async function savePositions() {
     const positions = nodes.map(node => ({
       routerId: node.id,
       positionX: Math.round(node.position.x),
-      positionY: Math.round(node.position.y)
+      positionY: Math.round(node.position.y),
     }))
 
     await topologyStore.saveNodePositions({
       positions,
-      companyId: props.companyId
+      companyId: props.companyId,
     })
   }, 500) // Debounce 500ms
 }
 
 // Handle node drag stop
-onNodeDragStop((event) => {
+onNodeDragStop(() => {
   savePositions()
 })
 
@@ -84,7 +85,7 @@ async function loadSavedPositions() {
   await topologyStore.fetchLayoutPositions(props.companyId)
 
   // Apply saved positions to flowNodes
-  flowNodes.value.forEach(node => {
+  flowNodes.value.forEach((node) => {
     const savedPos = topologyStore.getNodePosition(node.id)
     if (savedPos) {
       node.position = { x: savedPos.x, y: savedPos.y }
@@ -230,8 +231,10 @@ function getEdgeStyle(edge: TopologyEdge) {
 
 // Get edge color based on type and status
 function getEdgeColor(edge: TopologyEdge): string {
-  if (edge.linkStatus === 'INACTIVE') return '#ef4444'
-  if (edge.linkStatus === 'PLANNED') return '#94a3b8'
+  if (edge.linkStatus === 'INACTIVE')
+    return '#ef4444'
+  if (edge.linkStatus === 'PLANNED')
+    return '#94a3b8'
 
   switch (edge.linkType) {
     case 'ETHERNET':
@@ -292,7 +295,8 @@ function handleConnect(connection: Connection) {
 
 // Submit new connection
 async function submitConnection() {
-  if (!pendingConnection.value) return
+  if (!pendingConnection.value)
+    return
 
   isCreatingConnection.value = true
   connectionError.value = null
@@ -312,16 +316,19 @@ async function submitConnection() {
 
     if (result.success) {
       // Emit event to parent to refresh data
-      emit('connection-created')
+      emit('connectionCreated')
       // Close dialog and reset
       isCreateConnectionOpen.value = false
       pendingConnection.value = null
-    } else {
+    }
+    else {
       connectionError.value = result.error || 'Failed to create connection'
     }
-  } catch (err) {
+  }
+  catch (err) {
     connectionError.value = err instanceof Error ? err.message : 'Failed to create connection'
-  } finally {
+  }
+  finally {
     isCreatingConnection.value = false
   }
 }
@@ -340,9 +347,9 @@ function getNodeName(nodeId: string): string {
 }
 
 // Delete connection
-async function handleDeleteEdge(edgeId: string) {
+async function handleDeleteEdge(_edgeId: string) {
   // This would call the store to delete
-  console.log('Delete edge:', edgeId)
+  // TODO: Implement actual delete functionality
   isEdgeDetailOpen.value = false
 }
 
@@ -355,22 +362,22 @@ async function handleDeleteEdge(edgeId: string) {
     <!-- Vue Flow Container -->
     <div class="w-full rounded-lg border bg-card overflow-hidden" style="height: 600px;">
       <VueFlow
-      v-model:nodes="flowNodes"
-      v-model:edges="flowEdges"
-      :default-viewport="{ zoom: 1, x: 0, y: 0 }"
-      :min-zoom="0.2"
-      :max-zoom="2"
-      fit-view-on-init
-      @node-click="onNodeClick"
-      @edge-click="onEdgeClick"
-      @connect="handleConnect"
-    >
-      <!-- Background -->
-      <Background />
+        v-model:nodes="flowNodes"
+        v-model:edges="flowEdges"
+        :default-viewport="{ zoom: 1, x: 0, y: 0 }"
+        :min-zoom="0.2"
+        :max-zoom="2"
+        fit-view-on-init
+        @node-click="onNodeClick"
+        @edge-click="onEdgeClick"
+        @connect="handleConnect"
+      >
+        <!-- Background -->
+        <Background />
 
-      <!-- Controls -->
-      <Controls />
-    </VueFlow>
+        <!-- Controls -->
+        <Controls />
+      </VueFlow>
     </div>
 
     <!-- Create Connection Dialog -->
@@ -396,7 +403,9 @@ async function handleDeleteEdge(edgeId: string) {
 
         <!-- Connection Info -->
         <div class="mb-4 p-3 bg-muted/50 rounded-lg">
-          <p class="text-sm font-medium">Connecting:</p>
+          <p class="text-sm font-medium">
+            Connecting:
+          </p>
           <p class="text-sm text-muted-foreground">
             {{ getNodeName(newConnection.sourceRouterId) }} → {{ getNodeName(newConnection.targetRouterId) }}
           </p>
@@ -411,7 +420,7 @@ async function handleDeleteEdge(edgeId: string) {
         </div>
 
         <!-- Connection Form -->
-        <form @submit.prevent="submitConnection" class="space-y-4">
+        <form class="space-y-4" @submit.prevent="submitConnection">
           <!-- Link Type -->
           <div>
             <label class="block text-sm font-medium mb-1.5">
@@ -422,10 +431,18 @@ async function handleDeleteEdge(edgeId: string) {
               required
               class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              <option value="ETHERNET">Ethernet</option>
-              <option value="FIBER">Fiber Optic</option>
-              <option value="WIRELESS">Wireless</option>
-              <option value="VPN">VPN Tunnel</option>
+              <option value="ETHERNET">
+                Ethernet
+              </option>
+              <option value="FIBER">
+                Fiber Optic
+              </option>
+              <option value="WIRELESS">
+                Wireless
+              </option>
+              <option value="VPN">
+                VPN Tunnel
+              </option>
             </select>
           </div>
 
@@ -439,9 +456,15 @@ async function handleDeleteEdge(edgeId: string) {
               required
               class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              <option value="PLANNED">Planned</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
+              <option value="PLANNED">
+                Planned
+              </option>
+              <option value="ACTIVE">
+                Active
+              </option>
+              <option value="INACTIVE">
+                Inactive
+              </option>
             </select>
           </div>
 
@@ -456,7 +479,7 @@ async function handleDeleteEdge(edgeId: string) {
                 type="text"
                 placeholder="e.g., ether1"
                 class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              >
             </div>
             <div>
               <label class="block text-sm font-medium mb-1.5">
@@ -467,7 +490,7 @@ async function handleDeleteEdge(edgeId: string) {
                 type="text"
                 placeholder="e.g., ether2"
                 class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              >
             </div>
           </div>
 
@@ -483,7 +506,7 @@ async function handleDeleteEdge(edgeId: string) {
                 list="bandwidth-presets"
                 placeholder="e.g., 1Gbps"
                 class="flex-1 px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              >
               <datalist id="bandwidth-presets">
                 <option v-for="preset in bandwidthPresets" :key="preset" :value="preset" />
               </datalist>
@@ -505,7 +528,7 @@ async function handleDeleteEdge(edgeId: string) {
               step="0.01"
               placeholder="e.g., 500"
               class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            />
+            >
             <p class="text-xs text-muted-foreground mt-1">
               Especially useful for wireless links
             </p>
@@ -545,8 +568,8 @@ async function handleDeleteEdge(edgeId: string) {
                 fill="none"
                 viewBox="0 0 24 24"
               >
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
               {{ isCreatingConnection ? 'Creating...' : 'Create Connection' }}
             </button>
@@ -579,22 +602,36 @@ async function handleDeleteEdge(edgeId: string) {
         <div class="space-y-3">
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <p class="text-sm text-muted-foreground">Name</p>
-              <p class="font-medium">{{ selectedNode.name }}</p>
+              <p class="text-sm text-muted-foreground">
+                Name
+              </p>
+              <p class="font-medium">
+                {{ selectedNode.name }}
+              </p>
             </div>
             <div>
-              <p class="text-sm text-muted-foreground">IP Address</p>
-              <p class="font-medium">{{ selectedNode.ipAddress }}</p>
+              <p class="text-sm text-muted-foreground">
+                IP Address
+              </p>
+              <p class="font-medium">
+                {{ selectedNode.ipAddress }}
+              </p>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <p class="text-sm text-muted-foreground">Type</p>
-              <p class="font-medium">{{ selectedNode.routerType }}</p>
+              <p class="text-sm text-muted-foreground">
+                Type
+              </p>
+              <p class="font-medium">
+                {{ selectedNode.routerType }}
+              </p>
             </div>
             <div>
-              <p class="text-sm text-muted-foreground">Status</p>
+              <p class="text-sm text-muted-foreground">
+                Status
+              </p>
               <span
                 class="inline-flex px-2 py-0.5 rounded text-xs font-medium"
                 :class="{
@@ -609,13 +646,21 @@ async function handleDeleteEdge(edgeId: string) {
           </div>
 
           <div v-if="selectedNode.location">
-            <p class="text-sm text-muted-foreground">Location</p>
-            <p class="font-medium">{{ selectedNode.location }}</p>
+            <p class="text-sm text-muted-foreground">
+              Location
+            </p>
+            <p class="font-medium">
+              {{ selectedNode.location }}
+            </p>
           </div>
 
           <div v-if="selectedNode.companyName">
-            <p class="text-sm text-muted-foreground">Company</p>
-            <p class="font-medium">{{ selectedNode.companyName }}</p>
+            <p class="text-sm text-muted-foreground">
+              Company
+            </p>
+            <p class="font-medium">
+              {{ selectedNode.companyName }}
+            </p>
           </div>
         </div>
 
@@ -654,7 +699,9 @@ async function handleDeleteEdge(edgeId: string) {
         <div class="space-y-3">
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <p class="text-sm text-muted-foreground">Type</p>
+              <p class="text-sm text-muted-foreground">
+                Type
+              </p>
               <span
                 class="inline-flex px-2 py-0.5 rounded text-xs font-medium"
                 :class="{
@@ -668,7 +715,9 @@ async function handleDeleteEdge(edgeId: string) {
               </span>
             </div>
             <div>
-              <p class="text-sm text-muted-foreground">Status</p>
+              <p class="text-sm text-muted-foreground">
+                Status
+              </p>
               <span
                 class="inline-flex px-2 py-0.5 rounded text-xs font-medium"
                 :class="{
@@ -683,25 +732,41 @@ async function handleDeleteEdge(edgeId: string) {
           </div>
 
           <div v-if="selectedEdge.bandwidth">
-            <p class="text-sm text-muted-foreground">Bandwidth</p>
-            <p class="font-medium">{{ selectedEdge.bandwidth }}</p>
+            <p class="text-sm text-muted-foreground">
+              Bandwidth
+            </p>
+            <p class="font-medium">
+              {{ selectedEdge.bandwidth }}
+            </p>
           </div>
 
           <div v-if="selectedEdge.distance" class="grid grid-cols-2 gap-4">
             <div>
-              <p class="text-sm text-muted-foreground">Distance</p>
-              <p class="font-medium">{{ selectedEdge.distance }}m</p>
+              <p class="text-sm text-muted-foreground">
+                Distance
+              </p>
+              <p class="font-medium">
+                {{ selectedEdge.distance }}m
+              </p>
             </div>
           </div>
 
           <div v-if="selectedEdge.sourceInterface || selectedEdge.targetInterface" class="grid grid-cols-2 gap-4">
             <div v-if="selectedEdge.sourceInterface">
-              <p class="text-sm text-muted-foreground">Source Interface</p>
-              <p class="font-medium font-mono text-xs">{{ selectedEdge.sourceInterface }}</p>
+              <p class="text-sm text-muted-foreground">
+                Source Interface
+              </p>
+              <p class="font-medium font-mono text-xs">
+                {{ selectedEdge.sourceInterface }}
+              </p>
             </div>
             <div v-if="selectedEdge.targetInterface">
-              <p class="text-sm text-muted-foreground">Target Interface</p>
-              <p class="font-medium font-mono text-xs">{{ selectedEdge.targetInterface }}</p>
+              <p class="text-sm text-muted-foreground">
+                Target Interface
+              </p>
+              <p class="font-medium font-mono text-xs">
+                {{ selectedEdge.targetInterface }}
+              </p>
             </div>
           </div>
 
@@ -732,26 +797,30 @@ async function handleDeleteEdge(edgeId: string) {
 
     <!-- Legend -->
     <div class="mt-4 rounded-lg border bg-card p-4">
-      <h4 class="text-sm font-semibold mb-3">Legend</h4>
+      <h4 class="text-sm font-semibold mb-3">
+        Legend
+      </h4>
       <div class="grid gap-4 md:grid-cols-2">
         <!-- Node Types -->
         <div>
-          <p class="text-xs font-medium text-muted-foreground mb-2">Router Types</p>
+          <p class="text-xs font-medium text-muted-foreground mb-2">
+            Router Types
+          </p>
           <div class="space-y-1">
             <div class="flex items-center gap-2">
-              <div class="h-3 w-3 rounded bg-blue-600"></div>
+              <div class="h-3 w-3 rounded bg-blue-600" />
               <span class="text-xs">Upstream</span>
             </div>
             <div class="flex items-center gap-2">
-              <div class="h-3 w-3 rounded bg-green-600"></div>
+              <div class="h-3 w-3 rounded bg-green-600" />
               <span class="text-xs">Core</span>
             </div>
             <div class="flex items-center gap-2">
-              <div class="h-3 w-3 rounded bg-purple-600"></div>
+              <div class="h-3 w-3 rounded bg-purple-600" />
               <span class="text-xs">Distribution</span>
             </div>
             <div class="flex items-center gap-2">
-              <div class="h-3 w-3 rounded bg-orange-600"></div>
+              <div class="h-3 w-3 rounded bg-orange-600" />
               <span class="text-xs">Wireless</span>
             </div>
           </div>
@@ -759,22 +828,24 @@ async function handleDeleteEdge(edgeId: string) {
 
         <!-- Connection Types -->
         <div>
-          <p class="text-xs font-medium text-muted-foreground mb-2">Connection Types</p>
+          <p class="text-xs font-medium text-muted-foreground mb-2">
+            Connection Types
+          </p>
           <div class="space-y-1">
             <div class="flex items-center gap-2">
-              <div class="h-0.5 w-8 bg-green-600"></div>
+              <div class="h-0.5 w-8 bg-green-600" />
               <span class="text-xs">Ethernet</span>
             </div>
             <div class="flex items-center gap-2">
-              <div class="h-0.5 w-8 bg-blue-600"></div>
+              <div class="h-0.5 w-8 bg-blue-600" />
               <span class="text-xs">Fiber</span>
             </div>
             <div class="flex items-center gap-2">
-              <div class="h-0.5 w-8 bg-orange-600"></div>
+              <div class="h-0.5 w-8 bg-orange-600" />
               <span class="text-xs">Wireless</span>
             </div>
             <div class="flex items-center gap-2">
-              <div class="h-0.5 w-8 bg-purple-600"></div>
+              <div class="h-0.5 w-8 bg-purple-600" />
               <span class="text-xs">VPN</span>
             </div>
           </div>

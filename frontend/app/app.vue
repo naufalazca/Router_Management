@@ -48,13 +48,6 @@ useSeoMeta({
   twitterCard: 'summary_large_image',
 })
 
-const router = useRouter()
-
-defineShortcuts({
-  'G-H': () => router.push('/'),
-  'G-E': () => router.push('/email')
-})
-
 const textDirection = useTextDirection({ initialValue: 'ltr' })
 const dir = computed(() => textDirection.value === 'rtl' ? 'rtl' : 'ltr')
 </script>

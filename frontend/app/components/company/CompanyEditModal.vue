@@ -112,7 +112,7 @@ async function handleSubmit() {
       toast.error(result.error || 'Failed to update company')
     }
   }
-  catch (error) {
+  catch {
     toast.error('An unexpected error occurred')
   }
   finally {

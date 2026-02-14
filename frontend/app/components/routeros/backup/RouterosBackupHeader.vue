@@ -10,7 +10,7 @@ defineProps<{
 
 const emit = defineEmits<{
   'update:searchQuery': [value: string]
-  'open-generate-dialog': []
+  'openGenerateDialog': []
   'refresh': []
 }>()
 
@@ -47,7 +47,7 @@ async function handleRefresh() {
           placeholder="Search backups..."
           class="pl-8"
           :model-value="searchQuery"
-          @update:model-value="emit('update:searchQuery', $event)"
+          @update:model-value="emit('update:searchQuery', String($event))"
         />
       </div>
 
@@ -62,7 +62,7 @@ async function handleRefresh() {
       </Button>
 
       <!-- Generate Backup Button -->
-      <Button @click="emit('open-generate-dialog')">
+      <Button @click="emit('openGenerateDialog')">
         <Plus class="mr-2 h-4 w-4" />
         Generate Backup
       </Button>

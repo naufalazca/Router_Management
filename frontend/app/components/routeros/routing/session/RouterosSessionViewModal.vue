@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import type { Component } from 'vue'
 import type { BadgeVariants } from '@/components/ui/badge'
 import type { BGPSession } from '~/stores/routeros/routing'
-import type { Component } from 'vue'
 import {
   BadgeCheck,
   Clock,
@@ -159,7 +159,9 @@ const connectionInfo = computed(() => [
             <Globe class="h-5 w-5 text-primary" />
           </div>
           <div class="flex-1">
-            <h2 class="text-xl font-semibold">{{ session.name || 'Unnamed Session' }}</h2>
+            <h2 class="text-xl font-semibold">
+              {{ session.name || 'Unnamed Session' }}
+            </h2>
             <p class="text-sm text-muted-foreground">
               BGP Session Details
             </p>

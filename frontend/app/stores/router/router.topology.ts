@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import type { ApiError } from '~/types/api'
+import { computed, ref } from 'vue'
+
 import { useAuthStore } from '../auth'
 
 // Types
@@ -94,16 +94,18 @@ export const useTopologyStore = defineStore('topology', () => {
   // Get edges for a specific node (both incoming and outgoing)
   function getEdgesForNode(nodeId: string): TopologyEdge[] {
     return topology.value.edges.filter(
-      e => e.source === nodeId || e.target === nodeId
+      e => e.source === nodeId || e.target === nodeId,
     )
   }
 
   // Get connected nodes for a specific node
   function getConnectedNodes(nodeId: string): TopologyNode[] {
     const connectedIds = new Set<string>()
-    topology.value.edges.forEach(edge => {
-      if (edge.source === nodeId) connectedIds.add(edge.target)
-      if (edge.target === nodeId) connectedIds.add(edge.source)
+    topology.value.edges.forEach((edge) => {
+      if (edge.source === nodeId)
+        connectedIds.add(edge.target)
+      if (edge.target === nodeId)
+        connectedIds.add(edge.source)
     })
     return topology.value.nodes.filter(n => connectedIds.has(n.id))
   }
@@ -116,24 +118,27 @@ export const useTopologyStore = defineStore('topology', () => {
     try {
       const authStore = useAuthStore()
       const query = companyId ? `?companyId=${companyId}` : ''
-      const response = await $fetch<{ status: string; data: TopologyData }>(
+      const response = await $fetch<{ status: string, data: TopologyData }>(
         `${apiBase}/router/topology${query}`,
         {
           headers: {
             Authorization: `Bearer ${authStore.token}`,
           },
-        }
+        },
       )
 
       if (response && response.status === 'success') {
         topology.value = response.data
-      } else {
+      }
+      else {
         throw new Error('Failed to fetch topology')
       }
-    } catch (err) {
+    }
+    catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to fetch topology'
       console.error('Failed to fetch topology:', err)
-    } finally {
+    }
+    finally {
       isLoading.value = false
     }
   }
@@ -146,24 +151,27 @@ export const useTopologyStore = defineStore('topology', () => {
     try {
       const authStore = useAuthStore()
       const query = companyId ? `?companyId=${companyId}` : ''
-      const response = await $fetch<{ status: string; data: ConnectionDetail[] }>(
+      const response = await $fetch<{ status: string, data: ConnectionDetail[] }>(
         `${apiBase}/router/topology/connections${query}`,
         {
           headers: {
             Authorization: `Bearer ${authStore.token}`,
           },
-        }
+        },
       )
 
       if (response && response.status === 'success') {
         connections.value = response.data
-      } else {
+      }
+      else {
         throw new Error('Failed to fetch connections')
       }
-    } catch (err) {
+    }
+    catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to fetch connections'
       console.error('Failed to fetch connections:', err)
-    } finally {
+    }
+    finally {
       isLoading.value = false
     }
   }
@@ -172,21 +180,23 @@ export const useTopologyStore = defineStore('topology', () => {
   async function fetchConnection(id: string) {
     try {
       const authStore = useAuthStore()
-      const response = await $fetch<{ status: string; data: ConnectionDetail }>(
+      const response = await $fetch<{ status: string, data: ConnectionDetail }>(
         `${apiBase}/router/topology/connections/${id}`,
         {
           headers: {
             Authorization: `Bearer ${authStore.token}`,
           },
-        }
+        },
       )
 
       if (response && response.status === 'success') {
         return response.data
-      } else {
+      }
+      else {
         throw new Error('Failed to fetch connection')
       }
-    } catch (err) {
+    }
+    catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to fetch connection'
       console.error('Failed to fetch connection:', err)
       throw err
@@ -219,7 +229,7 @@ export const useTopologyStore = defineStore('topology', () => {
         body: data,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${authStore.token}`,
+          'Authorization': `Bearer ${authStore.token}`,
         },
       })
 
@@ -228,14 +238,17 @@ export const useTopologyStore = defineStore('topology', () => {
         await fetchTopology()
         await fetchConnections()
         return { success: true, data: response.data }
-      } else {
+      }
+      else {
         throw new Error(response?.message || 'Failed to create connection')
       }
-    } catch (err) {
+    }
+    catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to create connection'
       error.value = errorMsg
       return { success: false, error: errorMsg }
-    } finally {
+    }
+    finally {
       isLoading.value = false
     }
   }
@@ -251,7 +264,7 @@ export const useTopologyStore = defineStore('topology', () => {
       bandwidth: string
       distance: number
       notes: string
-    }>
+    }>,
   ) {
     isLoading.value = true
     error.value = null
@@ -267,7 +280,7 @@ export const useTopologyStore = defineStore('topology', () => {
         body: data,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${authStore.token}`,
+          'Authorization': `Bearer ${authStore.token}`,
         },
       })
 
@@ -276,14 +289,17 @@ export const useTopologyStore = defineStore('topology', () => {
         await fetchTopology()
         await fetchConnections()
         return { success: true, data: response.data }
-      } else {
+      }
+      else {
         throw new Error(response?.message || 'Failed to update connection')
       }
-    } catch (err) {
+    }
+    catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to update connection'
       error.value = errorMsg
       return { success: false, error: errorMsg }
-    } finally {
+    }
+    finally {
       isLoading.value = false
     }
   }
@@ -310,14 +326,17 @@ export const useTopologyStore = defineStore('topology', () => {
         await fetchTopology()
         await fetchConnections()
         return { success: true }
-      } else {
+      }
+      else {
         throw new Error(response?.message || 'Failed to delete connection')
       }
-    } catch (err) {
+    }
+    catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to delete connection'
       error.value = errorMsg
       return { success: false, error: errorMsg }
-    } finally {
+    }
+    finally {
       isLoading.value = false
     }
   }
@@ -337,7 +356,7 @@ export const useTopologyStore = defineStore('topology', () => {
     positionY: number
   }
 
-  const layoutPositions = ref<Map<string, { x: number; y: number }>>(new Map())
+  const layoutPositions = ref<Map<string, { x: number, y: number }>>(new Map())
 
   // Fetch layout positions for a company
   async function fetchLayoutPositions(companyId?: string) {
@@ -350,7 +369,7 @@ export const useTopologyStore = defineStore('topology', () => {
           routerId: string
           positionX: number
           positionY: number
-          router?: { id: string; name: string }
+          router?: { id: string, name: string }
         }>
       }>(`${apiBase}/router/topology/layout${query}`, {
         headers: {
@@ -360,14 +379,15 @@ export const useTopologyStore = defineStore('topology', () => {
 
       if (response && response.status === 'success') {
         // Build map of positions
-        const map = new Map<string, { x: number; y: number }>()
+        const map = new Map<string, { x: number, y: number }>()
         response.data.forEach((pos) => {
           map.set(pos.routerId, { x: Number(pos.positionX), y: Number(pos.positionY) })
         })
         layoutPositions.value = map
         return map
       }
-    } catch (err) {
+    }
+    catch (err) {
       console.error('Failed to fetch layout positions:', err)
     }
     return new Map()
@@ -390,7 +410,7 @@ export const useTopologyStore = defineStore('topology', () => {
         body: data,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${authStore.token}`,
+          'Authorization': `Bearer ${authStore.token}`,
         },
       })
 
@@ -400,7 +420,8 @@ export const useTopologyStore = defineStore('topology', () => {
         return { success: true }
       }
       return { success: false, error: response?.message || 'Failed to save position' }
-    } catch (err) {
+    }
+    catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to save position'
       console.error('Failed to save node position:', err)
       return { success: false, error: errorMsg }
@@ -422,7 +443,7 @@ export const useTopologyStore = defineStore('topology', () => {
         body: data,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${authStore.token}`,
+          'Authorization': `Bearer ${authStore.token}`,
         },
       })
 
@@ -434,7 +455,8 @@ export const useTopologyStore = defineStore('topology', () => {
         return { success: true }
       }
       return { success: false, error: response?.message || 'Failed to save positions' }
-    } catch (err) {
+    }
+    catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to save positions'
       console.error('Failed to save node positions:', err)
       return { success: false, error: errorMsg }
@@ -442,7 +464,7 @@ export const useTopologyStore = defineStore('topology', () => {
   }
 
   // Get cached position for a node
-  function getNodePosition(nodeId: string): { x: number; y: number } | undefined {
+  function getNodePosition(nodeId: string): { x: number, y: number } | undefined {
     return layoutPositions.value.get(nodeId)
   }
 

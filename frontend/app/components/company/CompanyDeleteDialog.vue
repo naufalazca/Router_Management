@@ -46,7 +46,7 @@ async function handleDelete() {
       toast.error(result.error || 'Failed to delete company')
     }
   }
-  catch (error) {
+  catch {
     toast.error('An unexpected error occurred')
   }
   finally {

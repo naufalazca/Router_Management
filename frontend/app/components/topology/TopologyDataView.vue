@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { TopologyNode, TopologyEdge } from '~/stores/router/router.topology'
 import { useTopologyStore } from '~/stores/router/router.topology'
 
 // Use store directly for reactive data
@@ -8,33 +7,29 @@ const topologyStore = useTopologyStore()
 
 // Computed stats - using topologyStore data directly
 const activeRouters = computed(() =>
-  topologyStore.topology.nodes.filter(n => n.status === 'ACTIVE').length
+  topologyStore.topology.nodes.filter(n => n.status === 'ACTIVE').length,
 )
 
 const inactiveRouters = computed(() =>
-  topologyStore.topology.nodes.filter(n => n.status === 'INACTIVE').length
+  topologyStore.topology.nodes.filter(n => n.status === 'INACTIVE').length,
 )
 
 const maintenanceRouters = computed(() =>
-  topologyStore.topology.nodes.filter(n => n.status === 'MAINTENANCE').length
+  topologyStore.topology.nodes.filter(n => n.status === 'MAINTENANCE').length,
 )
 
 const activeConnections = computed(() =>
-  topologyStore.topology.edges.filter(e => e.linkStatus === 'ACTIVE').length
+  topologyStore.topology.edges.filter(e => e.linkStatus === 'ACTIVE').length,
 )
 
 const plannedConnections = computed(() =>
-  topologyStore.topology.edges.filter(e => e.linkStatus === 'PLANNED').length
-)
-
-const inactiveConnections = computed(() =>
-  topologyStore.topology.edges.filter(e => e.linkStatus === 'INACTIVE').length
+  topologyStore.topology.edges.filter(e => e.linkStatus === 'PLANNED').length,
 )
 
 // Router type counts
 const routerTypeCounts = computed(() => {
   const counts: Record<string, number> = {}
-  topologyStore.topology.nodes.forEach(node => {
+  topologyStore.topology.nodes.forEach((node) => {
     counts[node.routerType] = (counts[node.routerType] || 0) + 1
   })
   return counts
@@ -43,7 +38,7 @@ const routerTypeCounts = computed(() => {
 // Connection type counts
 const connectionTypeCounts = computed(() => {
   const counts: Record<string, number> = {}
-  topologyStore.topology.edges.forEach(edge => {
+  topologyStore.topology.edges.forEach((edge) => {
     counts[edge.linkType] = (counts[edge.linkType] || 0) + 1
   })
   return counts
@@ -58,7 +53,9 @@ const connectionTypeCounts = computed(() => {
       <div class="rounded-lg border bg-card p-4">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-muted-foreground">Active Routers</p>
+            <p class="text-sm text-muted-foreground">
+              Active Routers
+            </p>
             <p class="text-2xl font-bold text-green-600 mt-1">
               {{ activeRouters }}
             </p>
@@ -75,7 +72,9 @@ const connectionTypeCounts = computed(() => {
       <div class="rounded-lg border bg-card p-4">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-muted-foreground">Inactive Routers</p>
+            <p class="text-sm text-muted-foreground">
+              Inactive Routers
+            </p>
             <p class="text-2xl font-bold text-red-600 mt-1">
               {{ inactiveRouters }}
             </p>
@@ -92,7 +91,9 @@ const connectionTypeCounts = computed(() => {
       <div class="rounded-lg border bg-card p-4">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-muted-foreground">Active Links</p>
+            <p class="text-sm text-muted-foreground">
+              Active Links
+            </p>
             <p class="text-2xl font-bold text-blue-600 mt-1">
               {{ activeConnections }}
             </p>
@@ -109,7 +110,9 @@ const connectionTypeCounts = computed(() => {
       <div class="rounded-lg border bg-card p-4">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-muted-foreground">Planned Links</p>
+            <p class="text-sm text-muted-foreground">
+              Planned Links
+            </p>
             <p class="text-2xl font-bold text-gray-600 mt-1">
               {{ plannedConnections }}
             </p>
@@ -127,7 +130,9 @@ const connectionTypeCounts = computed(() => {
     <div class="grid gap-4 md:grid-cols-2">
       <!-- Router Types -->
       <div class="rounded-lg border bg-card p-4">
-        <h3 class="text-sm font-semibold mb-4">Router Types</h3>
+        <h3 class="text-sm font-semibold mb-4">
+          Router Types
+        </h3>
         <div class="space-y-3">
           <div
             v-for="(count, type) in routerTypeCounts"
@@ -156,7 +161,9 @@ const connectionTypeCounts = computed(() => {
 
       <!-- Connection Types -->
       <div class="rounded-lg border bg-card p-4">
-        <h3 class="text-sm font-semibold mb-4">Connection Types</h3>
+        <h3 class="text-sm font-semibold mb-4">
+          Connection Types
+        </h3>
         <div class="space-y-3">
           <div
             v-for="(count, type) in connectionTypeCounts"

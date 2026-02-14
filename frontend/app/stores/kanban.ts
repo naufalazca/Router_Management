@@ -180,13 +180,5 @@ export const useKanbanStore = defineStore('kanban', {
   },
 })
 
-// Re-export all sub-stores for convenience
-export {
-  useKanbanAttachmentStore,
-  useKanbanBoardStore,
-  useKanbanCommentStore,
-  useKanbanLabelStore,
-  useKanbanListStore,
-  useKanbanTaskStore,
-  useKanbanTimeEntryStore,
-}
+// Note: Re-exports removed to avoid Nuxt auto-import duplication warnings
+// Import stores directly from their individual files instead

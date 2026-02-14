@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import type { Task, TaskComment } from '~/types/kanban-api'
 import type { UseTimeAgoMessages, UseTimeAgoOptions, UseTimeAgoUnitNamesDefault } from '@vueuse/core'
+import type { Task, TaskComment } from '~/types/kanban-api'
 import { DateFormatter } from '@internationalized/date'
-import { useKanbanTaskStore, useKanbanCommentStore, useKanbanAttachmentStore } from '~/stores/kanban'
-import { useAuthStore } from '~/stores/auth'
 import { nextTick } from 'vue'
+import { useAuthStore } from '~/stores/auth'
+import { useKanbanAttachmentStore } from '~/stores/kanban-attachment'
+import { useKanbanCommentStore } from '~/stores/kanban-comment'
+import { useKanbanTaskStore } from '~/stores/kanban-task'
 
 const props = defineProps<{
   boardId: string
@@ -15,7 +17,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
-  'task-updated': []
+  'taskUpdated': []
 }>()
 
 const taskStore = useKanbanTaskStore()
@@ -39,7 +41,8 @@ const fullsizeImageName = ref<string>('')
 // Load task details when modal opens
 watch(() => props.open, (newVal, oldVal) => {
   // Only trigger if state actually changed
-  if (newVal === oldVal) return
+  if (newVal === oldVal)
+    return
 
   if (newVal && props.taskId) {
     // Reset loading state
@@ -69,7 +72,8 @@ watch(() => props.open, (newVal, oldVal) => {
 
 async function loadTaskDetails() {
   // Prevent multiple simultaneous fetches
-  if (isLoadingDetails.value) return
+  if (isLoadingDetails.value)
+    return
 
   isLoadingDetails.value = true
 
@@ -163,7 +167,7 @@ async function toggleComplete() {
 
   // Reload task details
   await loadTaskDetails()
-  emit('task-updated')
+  emit('taskUpdated')
 }
 
 function colorPriority(p?: string) {
@@ -368,8 +372,12 @@ function closeFullsizeImage() {
                 <Icon name="lucide:maximize-2" class="h-8 w-8 text-white drop-shadow-lg" />
               </div>
               <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-                <p class="text-xs text-white truncate">{{ attachment.fileName }}</p>
-                <p class="text-[10px] text-white/70">{{ formatFileSize(Number(attachment.fileSize)) }}</p>
+                <p class="text-xs text-white truncate">
+                  {{ attachment.fileName }}
+                </p>
+                <p class="text-[10px] text-white/70">
+                  {{ formatFileSize(Number(attachment.fileSize)) }}
+                </p>
               </div>
             </div>
           </div>
@@ -390,7 +398,9 @@ function closeFullsizeImage() {
                   class="flex-shrink-0 text-muted-foreground"
                 />
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm truncate">{{ attachment.fileName }}</p>
+                  <p class="text-sm truncate">
+                    {{ attachment.fileName }}
+                  </p>
                   <p class="text-xs text-muted-foreground">
                     {{ formatFileSize(Number(attachment.fileSize)) }}
                   </p>

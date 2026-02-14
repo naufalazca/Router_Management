@@ -1,12 +1,6 @@
 <script setup lang="ts">
 const open = ref(false)
 
-const { metaSymbol } = useShortcuts()
-
-defineShortcuts({
-  Meta_J: () => handleOpenChange(),
-})
-
 function handleOpenChange() {
   open.value = !open.value
 }

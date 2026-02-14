@@ -43,7 +43,7 @@ const emit = defineEmits<{
   'view': [backup: RouterBackup]
   'download': [backup: RouterBackup]
   'restore': [backup: RouterBackup]
-  'pin-toggle': [backup: RouterBackup]
+  'pinToggle': [backup: RouterBackup]
   'delete': [backup: RouterBackup]
   'status-filter': [status: BackupStatus | null]
   'pinned-filter': [isPinned: boolean | null]
@@ -235,7 +235,7 @@ function getTriggerBadge(triggerType: string) {
                     variant="ghost"
                     size="icon"
                     :title="backup.isPinned ? 'Unpin Backup' : 'Pin Backup'"
-                    @click="emit('pin-toggle', backup)"
+                    @click="emit('pinToggle', backup)"
                   >
                     <component
                       :is="backup.isPinned ? PinOff : Pin"

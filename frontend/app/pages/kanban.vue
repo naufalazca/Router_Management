@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import KanbanBoard from '~/components/kanban/KanbanBoard.vue'
-import { useKanbanBoardStore, useKanbanListStore, useKanbanStore } from '~/stores/kanban'
+import { useKanbanBoardStore } from '~/stores/kanban-board'
+import { useKanbanListStore } from '~/stores/kanban-list'
+import { useKanbanStore } from '~/stores/kanban'
 
 const kanbanStore = useKanbanStore()
 const boardStore = useKanbanBoardStore()

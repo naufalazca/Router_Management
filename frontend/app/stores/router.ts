@@ -273,7 +273,9 @@ export const useRouterStore = defineStore('router', {
       try {
         const { $apiFetch } = useApiFetch()
 
-        const response = await $apiFetch<{ status: string, data: any }>(`/routers/${routerId}/test?type=${type}`)
+        const response = await $apiFetch<{ status: string, data: any }>(`/routers/${routerId}/test?type=${type}`, {
+          method: 'POST',
+        })
 
         return { success: true, data: response.data }
       }

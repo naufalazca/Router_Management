@@ -125,7 +125,7 @@ export class RouterController {
 
   /**
    * Test router connection (supports API, SSH, or both)
-   * GET /api/routers/:routerId/test
+   * POST /api/routers/:routerId/test
    * Query: type=API|SSH|BOTH (default: BOTH)
    */
   testConnection = async (_req: Request, res: Response, next: NextFunction) => {

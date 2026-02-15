@@ -5,7 +5,6 @@ import type {
   UpdateTimeEntryInput,
 } from '~/types/kanban-api'
 import { defineStore } from 'pinia'
-import { useAuthStore } from './auth'
 
 interface TimeEntryState {
   timeEntries: TaskTimeEntry[]
@@ -28,17 +27,10 @@ export const useKanbanTimeEntryStore = defineStore('kanban-time-entry', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<TaskTimeEntry[]>>(
-          `${apiBase}/kanban/tasks/${taskId}/time-entries`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<ApiResponse<TaskTimeEntry[]>>(
+          `/kanban/tasks/${taskId}/time-entries`,
         )
 
         this.timeEntries = response.data || []
@@ -66,17 +58,12 @@ export const useKanbanTimeEntryStore = defineStore('kanban-time-entry', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<TaskTimeEntry>>(
-          `${apiBase}/kanban/tasks/${taskId}/time-entries`,
+        const response = await $apiFetch<ApiResponse<TaskTimeEntry>>(
+          `/kanban/tasks/${taskId}/time-entries`,
           {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: data,
           },
         )
@@ -109,17 +96,12 @@ export const useKanbanTimeEntryStore = defineStore('kanban-time-entry', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<TaskTimeEntry>>(
-          `${apiBase}/kanban/tasks/${taskId}/time-entries/${timeEntryId}`,
+        const response = await $apiFetch<ApiResponse<TaskTimeEntry>>(
+          `/kanban/tasks/${taskId}/time-entries/${timeEntryId}`,
           {
             method: 'PUT',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: data,
           },
         )
@@ -155,15 +137,10 @@ export const useKanbanTimeEntryStore = defineStore('kanban-time-entry', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        await $fetch(`${apiBase}/kanban/tasks/${taskId}/time-entries/${timeEntryId}`, {
+        await $apiFetch(`/kanban/tasks/${taskId}/time-entries/${timeEntryId}`, {
           method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
         })
 
         // Remove time entry from the array

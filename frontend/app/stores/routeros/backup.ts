@@ -16,8 +16,6 @@ import { computed, ref } from 'vue'
  * Manages backup state and API interactions
  */
 export const useBackupStore = defineStore('routeros-backup', () => {
-  const config = useRuntimeConfig()
-  const API_BASE = config.public.apiBase
 
   // State
   const backups = ref<RouterBackup[]>([])
@@ -98,6 +96,7 @@ export const useBackupStore = defineStore('routeros-backup', () => {
     error.value = null
 
     try {
+      const { $apiFetch } = useApiFetch()
       const params = new URLSearchParams()
 
       if (query?.routerId)
@@ -113,17 +112,12 @@ export const useBackupStore = defineStore('routeros-backup', () => {
       if (query?.offset)
         params.append('offset', String(query.offset))
 
-      const response = await fetch(`${API_BASE}/routeros/backup?${params}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch backups')
-      }
-
-      const result = await response.json()
+      const queryString = params.toString()
+      const result = await $apiFetch<{
+        status: string
+        data: RouterBackup[]
+        pagination: { total: number, limit: number, offset: number, hasMore: boolean }
+      }>(`/routeros/backup${queryString ? `?${queryString}` : ''}`)
 
       backups.value = result.data
       total.value = result.pagination.total
@@ -150,17 +144,9 @@ export const useBackupStore = defineStore('routeros-backup', () => {
     error.value = null
 
     try {
-      const response = await fetch(`${API_BASE}/routeros/backup/${backupId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
+      const { $apiFetch } = useApiFetch()
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch backup')
-      }
-
-      const result = await response.json()
+      const result = await $apiFetch<{ status: string, data: RouterBackup }>(`/routeros/backup/${backupId}`)
       currentBackup.value = result.data
 
       return result.data
@@ -182,21 +168,12 @@ export const useBackupStore = defineStore('routeros-backup', () => {
     error.value = null
 
     try {
-      const response = await fetch(`${API_BASE}/routeros/backup/${data.routerId}/trigger`, {
+      const { $apiFetch } = useApiFetch()
+
+      const result = await $apiFetch<{ status: string, data: RouterBackup }>(`/routeros/backup/${data.routerId}/trigger`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(data),
+        body: data,
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to trigger backup')
-      }
-
-      const result = await response.json()
 
       // Add new backup to list
       backups.value.unshift(result.data)
@@ -220,17 +197,9 @@ export const useBackupStore = defineStore('routeros-backup', () => {
     error.value = null
 
     try {
-      const response = await fetch(`${API_BASE}/routeros/backup/${backupId}/download?expiresIn=${expiresIn}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
+      const { $apiFetch } = useApiFetch()
 
-      if (!response.ok) {
-        throw new Error('Failed to get download URL')
-      }
-
-      const result = await response.json()
+      const result = await $apiFetch<{ status: string, data: { url: string } }>(`/routeros/backup/${backupId}/download?expiresIn=${expiresIn}`)
 
       return result.data.url
     }
@@ -272,21 +241,12 @@ export const useBackupStore = defineStore('routeros-backup', () => {
     error.value = null
 
     try {
-      const response = await fetch(`${API_BASE}/routeros/backup/${backupId}/restore`, {
+      const { $apiFetch } = useApiFetch()
+
+      const result = await $apiFetch<{ status: string, data: any }>(`/routeros/backup/${backupId}/restore`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(data),
+        body: data,
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to restore backup')
-      }
-
-      const result = await response.json()
 
       // Refresh restore history
       await fetchRestoreHistory(backupId)
@@ -310,17 +270,9 @@ export const useBackupStore = defineStore('routeros-backup', () => {
     error.value = null
 
     try {
-      const response = await fetch(`${API_BASE}/routeros/backup/${backupId}/restore-history`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
+      const { $apiFetch } = useApiFetch()
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch restore history')
-      }
-
-      const result = await response.json()
+      const result = await $apiFetch<{ status: string, data: BackupRestore[] }>(`/routeros/backup/${backupId}/restore-history`)
       restoreHistory.value = result.data
 
       return result.data
@@ -342,21 +294,12 @@ export const useBackupStore = defineStore('routeros-backup', () => {
     error.value = null
 
     try {
-      const response = await fetch(`${API_BASE}/routeros/backup/${backupId}/pin`, {
+      const { $apiFetch } = useApiFetch()
+
+      const result = await $apiFetch<{ status: string, data: RouterBackup }>(`/routeros/backup/${backupId}/pin`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(data || {}),
+        body: data || {},
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to toggle pin')
-      }
-
-      const result = await response.json()
 
       // Update backup in list
       const index = backups.value.findIndex(b => b.id === backupId)
@@ -388,17 +331,11 @@ export const useBackupStore = defineStore('routeros-backup', () => {
     error.value = null
 
     try {
-      const response = await fetch(`${API_BASE}/routeros/backup/${backupId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
+      const { $apiFetch } = useApiFetch()
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to delete backup')
-      }
+      await $apiFetch(`/routeros/backup/${backupId}`, {
+        method: 'DELETE',
+      })
 
       // Remove from list
       backups.value = backups.value.filter(b => b.id !== backupId)

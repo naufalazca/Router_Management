@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { useAuthStore } from './auth'
 
 export type RouterStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE'
 export type RouterType = 'UPSTREAM' | 'CORE' | 'DISTRIBUSI' | 'WIRELESS'
@@ -88,21 +87,13 @@ export const useRouterStore = defineStore('router', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: Router[] }>(
-          `${apiBase}/routers`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
-        )
+        const response = await $apiFetch<{ status: string, data: Router[] }>('/routers')
 
-        this.routers = response.data
-        return { success: true, data: response.data }
+        // Ensure response.data is an array
+        this.routers = response.data || []
+        return { success: true, data: response.data || [] }
       }
       catch (error: any) {
         console.error('Fetch routers error:', error)
@@ -128,18 +119,9 @@ export const useRouterStore = defineStore('router', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: Router[] }>(
-          `${apiBase}/routers/bgp`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
-        )
+        const response = await $apiFetch<{ status: string, data: Router[] }>('/routers/bgp')
 
         this.bgpRouters = response.data
         return { success: true, data: response.data }
@@ -163,18 +145,9 @@ export const useRouterStore = defineStore('router', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: Router }>(
-          `${apiBase}/routers/${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
-        )
+        const response = await $apiFetch<{ status: string, data: Router }>(`/routers/${id}`)
 
         this.currentRouter = response.data
         return { success: true, data: response.data }
@@ -197,20 +170,12 @@ export const useRouterStore = defineStore('router', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: Router }>(
-          `${apiBase}/routers`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-            body: data,
-          },
-        )
+        const response = await $apiFetch<{ status: string, data: Router }>('/routers', {
+          method: 'POST',
+          body: data,
+        })
 
         // Add new router to the list
         this.routers.push(response.data)
@@ -234,20 +199,12 @@ export const useRouterStore = defineStore('router', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: Router }>(
-          `${apiBase}/routers/${id}`,
-          {
-            method: 'PUT',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-            body: data,
-          },
-        )
+        const response = await $apiFetch<{ status: string, data: Router }>(`/routers/${id}`, {
+          method: 'PUT',
+          body: data,
+        })
 
         // Update router in the list
         const index = this.routers.findIndex(r => r.id === id)
@@ -280,15 +237,10 @@ export const useRouterStore = defineStore('router', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        await $fetch(`${apiBase}/routers/${id}`, {
+        await $apiFetch(`/routers/${id}`, {
           method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
         })
 
         // Remove router from the list
@@ -319,18 +271,9 @@ export const useRouterStore = defineStore('router', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: any }>(
-          `${apiBase}/routers/${routerId}/test?type=${type}`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
-        )
+        const response = await $apiFetch<{ status: string, data: any }>(`/routers/${routerId}/test?type=${type}`)
 
         return { success: true, data: response.data }
       }
@@ -386,7 +329,7 @@ export const useRouterStore = defineStore('router', {
     ubiquitiRouters: state =>
       state.routers.filter(r => r.routerBrand === 'UBIVIQUITI'),
 
-    routerCount: state => state.routers.length,
+    routerCount: state => state.routers?.length ?? 0,
 
     getRouterById: state => (id: string) =>
       state.routers.find(r => r.id === id),

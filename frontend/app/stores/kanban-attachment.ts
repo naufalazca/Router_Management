@@ -4,7 +4,6 @@ import type {
   TaskAttachment,
 } from '~/types/kanban-api'
 import { defineStore } from 'pinia'
-import { useAuthStore } from './auth'
 
 interface AttachmentState {
   attachments: TaskAttachment[]
@@ -31,17 +30,10 @@ export const useKanbanAttachmentStore = defineStore('kanban-attachment', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<TaskAttachment[]>>(
-          `${apiBase}/kanban/tasks/${taskId}/attachments`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<ApiResponse<TaskAttachment[]>>(
+          `/kanban/tasks/${taskId}/attachments`,
         )
 
         this.attachments = response.data || []
@@ -66,20 +58,15 @@ export const useKanbanAttachmentStore = defineStore('kanban-attachment', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
         const formData = new FormData()
         formData.append('file', file)
 
-        const response = await $fetch<ApiResponse<TaskAttachment>>(
-          `${apiBase}/kanban/tasks/${taskId}/attachments`,
+        const response = await $apiFetch<ApiResponse<TaskAttachment>>(
+          `/kanban/tasks/${taskId}/attachments`,
           {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: formData,
             // Note: $fetch doesn't support onUploadProgress
             // You can use XMLHttpRequest or axios if you need upload progress
@@ -118,17 +105,10 @@ export const useKanbanAttachmentStore = defineStore('kanban-attachment', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<TaskAttachment>>(
-          `${apiBase}/kanban/tasks/${taskId}/attachments/${attachmentId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<ApiResponse<TaskAttachment>>(
+          `/kanban/tasks/${taskId}/attachments/${attachmentId}`,
         )
 
         return { success: true, data: response.data }
@@ -151,8 +131,9 @@ export const useKanbanAttachmentStore = defineStore('kanban-attachment', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
+        const { useAuthStore } = await import('./auth')
         const authStore = useAuthStore()
+        const config = useRuntimeConfig()
         const apiBase = config.public.apiBase || 'http://localhost:5000/api'
 
         // Download endpoint returns the file directly
@@ -205,15 +186,10 @@ export const useKanbanAttachmentStore = defineStore('kanban-attachment', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        await $fetch(`${apiBase}/kanban/tasks/${taskId}/attachments/${attachmentId}`, {
+        await $apiFetch(`/kanban/tasks/${taskId}/attachments/${attachmentId}`, {
           method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
         })
 
         // Remove attachment from the array
@@ -239,17 +215,10 @@ export const useKanbanAttachmentStore = defineStore('kanban-attachment', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<StorageStats>>(
-          `${apiBase}/kanban/tasks/${taskId}/attachments/stats`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<ApiResponse<StorageStats>>(
+          `/kanban/tasks/${taskId}/attachments/stats`,
         )
 
         this.storageStats = response.data || null
@@ -273,17 +242,10 @@ export const useKanbanAttachmentStore = defineStore('kanban-attachment', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<StorageStats>>(
-          `${apiBase}/kanban/attachments/stats`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<ApiResponse<StorageStats>>(
+          `/kanban/attachments/stats`,
         )
 
         this.storageStats = response.data || null

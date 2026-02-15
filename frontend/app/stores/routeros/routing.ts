@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { useAuthStore } from '../auth'
 
 /**
  * BGP Connection Interface
@@ -212,17 +211,10 @@ export const useRouterOSRoutingStore = defineStore('routerosRouting', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: BGPConnection[] }>(
-          `${apiBase}/routeros/${routerId}/bgp/connections`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<{ status: string, data: BGPConnection[] }>(
+          `/routeros/${routerId}/bgp/connections`,
         )
 
         this.connections = response.data
@@ -251,17 +243,10 @@ export const useRouterOSRoutingStore = defineStore('routerosRouting', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: BGPConnection }>(
-          `${apiBase}/routeros/${routerId}/bgp/connections/${connectionId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<{ status: string, data: BGPConnection }>(
+          `/routeros/${routerId}/bgp/connections/${connectionId}`,
         )
 
         this.currentConnection = response.data
@@ -289,18 +274,13 @@ export const useRouterOSRoutingStore = defineStore('routerosRouting', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{
+        const response = await $apiFetch<{
           status: string
           message: string
-        }>(`${apiBase}/routeros/${routerId}/bgp/connections/${connectionId}/enable`, {
+        }>(`/routeros/${routerId}/bgp/connections/${connectionId}/enable`, {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
         })
 
         // Update local state
@@ -333,18 +313,13 @@ export const useRouterOSRoutingStore = defineStore('routerosRouting', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{
+        const response = await $apiFetch<{
           status: string
           message: string
-        }>(`${apiBase}/routeros/${routerId}/bgp/connections/${connectionId}/disable`, {
+        }>(`/routeros/${routerId}/bgp/connections/${connectionId}/disable`, {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
         })
 
         // Update local state
@@ -377,18 +352,13 @@ export const useRouterOSRoutingStore = defineStore('routerosRouting', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{
+        const response = await $apiFetch<{
           status: string
           message: string
-        }>(`${apiBase}/routeros/${routerId}/bgp/connections/${connectionId}/reset`, {
+        }>(`/routeros/${routerId}/bgp/connections/${connectionId}/reset`, {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
         })
 
         return { success: true, message: response.message }
@@ -414,17 +384,10 @@ export const useRouterOSRoutingStore = defineStore('routerosRouting', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: BGPAdvertisement[] }>(
-          `${apiBase}/routeros/${routerId}/bgp/advertisements`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<{ status: string, data: BGPAdvertisement[] }>(
+          `/routeros/${routerId}/bgp/advertisements`,
         )
 
         this.advertisements = response.data
@@ -453,9 +416,7 @@ export const useRouterOSRoutingStore = defineStore('routerosRouting', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
         const params = new URLSearchParams()
         if (filters.prefix)
@@ -466,15 +427,10 @@ export const useRouterOSRoutingStore = defineStore('routerosRouting', {
           params.append('fromPeer', filters.fromPeer)
 
         const queryString = params.toString()
-        const url = `${apiBase}/routeros/${routerId}/bgp/advertisements/filter${queryString ? `?${queryString}` : ''}`
+        const url = `/routeros/${routerId}/bgp/advertisements/filter${queryString ? `?${queryString}` : ''}`
 
-        const response = await $fetch<{ status: string, data: BGPAdvertisement[] }>(
+        const response = await $apiFetch<{ status: string, data: BGPAdvertisement[] }>(
           url,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
         )
 
         this.advertisements = response.data
@@ -503,17 +459,10 @@ export const useRouterOSRoutingStore = defineStore('routerosRouting', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: BGPSession[] }>(
-          `${apiBase}/routeros/${routerId}/bgp/sessions`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<{ status: string, data: BGPSession[] }>(
+          `/routeros/${routerId}/bgp/sessions`,
         )
 
         this.sessions = response.data
@@ -542,17 +491,10 @@ export const useRouterOSRoutingStore = defineStore('routerosRouting', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: BGPSession }>(
-          `${apiBase}/routeros/${routerId}/bgp/sessions/${sessionId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<{ status: string, data: BGPSession }>(
+          `/routeros/${routerId}/bgp/sessions/${sessionId}`,
         )
 
         this.currentSession = response.data
@@ -580,17 +522,10 @@ export const useRouterOSRoutingStore = defineStore('routerosRouting', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: ALLBGPData }>(
-          `${apiBase}/routeros/${routerId}/bgp/all`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<{ status: string, data: ALLBGPData }>(
+          `/routeros/${routerId}/bgp/all`,
         )
 
         this.allBGPData = response.data
@@ -624,17 +559,10 @@ export const useRouterOSRoutingStore = defineStore('routerosRouting', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: BGPSessionStats }>(
-          `${apiBase}/routeros/${routerId}/bgp/sessions/stats`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<{ status: string, data: BGPSessionStats }>(
+          `/routeros/${routerId}/bgp/sessions/stats`,
         )
 
         this.sessionStats = response.data

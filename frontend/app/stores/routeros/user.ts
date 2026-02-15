@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { useAuthStore } from '../auth'
 
 /**
  * RouterOS User Interface
@@ -63,17 +62,10 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: RouterOSUser[] }>(
-          `${apiBase}/routeros/users/${routerId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<{ status: string, data: RouterOSUser[] }>(
+          `/routeros/users/${routerId}`,
         )
 
         // Parse lastLoggedIn to Date objects
@@ -107,17 +99,10 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: RouterOSUser }>(
-          `${apiBase}/routeros/users/${routerId}/${username}`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<{ status: string, data: RouterOSUser }>(
+          `/routeros/users/${routerId}/${username}`,
         )
 
         this.currentUser = {
@@ -150,19 +135,14 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{
+        const response = await $apiFetch<{
           status: string
           data: RouterOSUser
           message: string
-        }>(`${apiBase}/routeros/users/${routerId}`, {
+        }>(`/routeros/users/${routerId}`, {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
           body: data,
         })
 
@@ -203,19 +183,14 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{
+        const response = await $apiFetch<{
           status: string
           data: RouterOSUser
           message: string
-        }>(`${apiBase}/routeros/users/${routerId}/${userId}`, {
+        }>(`/routeros/users/${routerId}/${userId}`, {
           method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
           body: data,
         })
 
@@ -260,15 +235,10 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        await $fetch(`${apiBase}/routeros/users/${routerId}/${userId}`, {
+        await $apiFetch(`/routeros/users/${routerId}/${userId}`, {
           method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
         })
 
         // Remove from local state
@@ -302,19 +272,14 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{
+        const response = await $apiFetch<{
           status: string
           data: RouterOSUser
           message: string
-        }>(`${apiBase}/routeros/users/${routerId}/${userId}/enable`, {
+        }>(`/routeros/users/${routerId}/${userId}/enable`, {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
         })
 
         const updatedUser = {
@@ -353,19 +318,14 @@ export const useRouterOSUserStore = defineStore('routerosUser', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{
+        const response = await $apiFetch<{
           status: string
           data: RouterOSUser
           message: string
-        }>(`${apiBase}/routeros/users/${routerId}/${userId}/disable`, {
+        }>(`/routeros/users/${routerId}/${userId}/disable`, {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
         })
 
         const updatedUser = {

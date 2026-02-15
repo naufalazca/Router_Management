@@ -5,7 +5,6 @@ import type {
   UpdateCommentInput,
 } from '~/types/kanban-api'
 import { defineStore } from 'pinia'
-import { useAuthStore } from './auth'
 
 interface CommentState {
   comments: TaskComment[]
@@ -26,17 +25,10 @@ export const useKanbanCommentStore = defineStore('kanban-comment', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<TaskComment[]>>(
-          `${apiBase}/kanban/tasks/${taskId}/comments`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<ApiResponse<TaskComment[]>>(
+          `/kanban/tasks/${taskId}/comments`,
         )
 
         this.comments = response.data || []
@@ -60,17 +52,12 @@ export const useKanbanCommentStore = defineStore('kanban-comment', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<TaskComment>>(
-          `${apiBase}/kanban/tasks/${taskId}/comments`,
+        const response = await $apiFetch<ApiResponse<TaskComment>>(
+          `/kanban/tasks/${taskId}/comments`,
           {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: data,
           },
         )
@@ -98,17 +85,12 @@ export const useKanbanCommentStore = defineStore('kanban-comment', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<TaskComment>>(
-          `${apiBase}/kanban/tasks/${taskId}/comments/${commentId}`,
+        const response = await $apiFetch<ApiResponse<TaskComment>>(
+          `/kanban/tasks/${taskId}/comments/${commentId}`,
           {
             method: 'PUT',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: data,
           },
         )
@@ -139,15 +121,10 @@ export const useKanbanCommentStore = defineStore('kanban-comment', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        await $fetch(`${apiBase}/kanban/tasks/${taskId}/comments/${commentId}`, {
+        await $apiFetch(`/kanban/tasks/${taskId}/comments/${commentId}`, {
           method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
         })
 
         // Remove comment from the array

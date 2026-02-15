@@ -7,7 +7,6 @@ import type {
   UpdateTaskInput,
 } from '~/types/kanban-api'
 import { defineStore } from 'pinia'
-import { useAuthStore } from './auth'
 
 interface TaskState {
   tasks: Task[]
@@ -32,17 +31,10 @@ export const useKanbanTaskStore = defineStore('kanban-task', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Task[]>>(
-          `${apiBase}/kanban/boards/${boardId}/lists/${listId}/tasks`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<ApiResponse<Task[]>>(
+          `/kanban/boards/${boardId}/lists/${listId}/tasks`,
         )
 
         // Return a copy of the data to avoid shared references between lists
@@ -67,17 +59,10 @@ export const useKanbanTaskStore = defineStore('kanban-task', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Task>>(
-          `${apiBase}/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<ApiResponse<Task>>(
+          `/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}`,
         )
 
         this.currentTask = response.data || null
@@ -101,17 +86,12 @@ export const useKanbanTaskStore = defineStore('kanban-task', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Task>>(
-          `${apiBase}/kanban/boards/${boardId}/lists/${listId}/tasks`,
+        const response = await $apiFetch<ApiResponse<Task>>(
+          `/kanban/boards/${boardId}/lists/${listId}/tasks`,
           {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: data,
           },
         )
@@ -138,17 +118,12 @@ export const useKanbanTaskStore = defineStore('kanban-task', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Task>>(
-          `${apiBase}/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}`,
+        const response = await $apiFetch<ApiResponse<Task>>(
+          `/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}`,
           {
             method: 'PUT',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: data,
           },
         )
@@ -184,17 +159,12 @@ export const useKanbanTaskStore = defineStore('kanban-task', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        await $fetch(
-          `${apiBase}/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}`,
+        await $apiFetch(
+          `/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}`,
           {
             method: 'DELETE',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
           },
         )
 
@@ -224,17 +194,12 @@ export const useKanbanTaskStore = defineStore('kanban-task', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Task>>(
-          `${apiBase}/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}/move`,
+        const response = await $apiFetch<ApiResponse<Task>>(
+          `/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}/move`,
           {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: data,
           },
         )
@@ -260,17 +225,12 @@ export const useKanbanTaskStore = defineStore('kanban-task', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Task>>(
-          `${apiBase}/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}/archive`,
+        const response = await $apiFetch<ApiResponse<Task>>(
+          `/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}/archive`,
           {
             method: 'PATCH',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
           },
         )
 
@@ -300,17 +260,12 @@ export const useKanbanTaskStore = defineStore('kanban-task', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Task>>(
-          `${apiBase}/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}/restore`,
+        const response = await $apiFetch<ApiResponse<Task>>(
+          `/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}/restore`,
           {
             method: 'PATCH',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
           },
         )
 
@@ -340,17 +295,12 @@ export const useKanbanTaskStore = defineStore('kanban-task', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Task>>(
-          `${apiBase}/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}/complete`,
+        const response = await $apiFetch<ApiResponse<Task>>(
+          `/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}/complete`,
           {
             method: 'PATCH',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
           },
         )
 
@@ -385,17 +335,12 @@ export const useKanbanTaskStore = defineStore('kanban-task', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Task>>(
-          `${apiBase}/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}/uncomplete`,
+        const response = await $apiFetch<ApiResponse<Task>>(
+          `/kanban/boards/${boardId}/lists/${listId}/tasks/${taskId}/uncomplete`,
           {
             method: 'PATCH',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
           },
         )
 
@@ -430,17 +375,10 @@ export const useKanbanTaskStore = defineStore('kanban-task', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<TaskActivity[]>>(
-          `${apiBase}/kanban/tasks/${taskId}/activities`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<ApiResponse<TaskActivity[]>>(
+          `/kanban/tasks/${taskId}/activities`,
         )
 
         this.taskActivities = response.data || []

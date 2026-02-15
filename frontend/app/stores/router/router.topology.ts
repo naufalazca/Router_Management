@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
-import { useAuthStore } from '../auth'
+import { useApiFetch } from '@/composables/useApiFetch'
 
 // Types
 export interface TopologyNode {
@@ -73,14 +73,14 @@ export interface ConnectionDetail {
 }
 
 export const useTopologyStore = defineStore('topology', () => {
+  // API fetch composable
+  const { $apiFetch } = useApiFetch()
+
   // State
   const topology = ref<TopologyData>({ nodes: [], edges: [] })
   const connections = ref<ConnectionDetail[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
-
-  // API base URL
-  const apiBase = useRuntimeConfig().public.apiBase || '/api'
 
   // Computed
   const nodeCount = computed(() => topology.value.nodes.length)
@@ -116,15 +116,9 @@ export const useTopologyStore = defineStore('topology', () => {
     error.value = null
 
     try {
-      const authStore = useAuthStore()
       const query = companyId ? `?companyId=${companyId}` : ''
-      const response = await $fetch<{ status: string, data: TopologyData }>(
-        `${apiBase}/router/topology${query}`,
-        {
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
-        },
+      const response = await $apiFetch<{ status: string, data: TopologyData }>(
+        `/router/topology${query}`,
       )
 
       if (response && response.status === 'success') {
@@ -149,15 +143,9 @@ export const useTopologyStore = defineStore('topology', () => {
     error.value = null
 
     try {
-      const authStore = useAuthStore()
       const query = companyId ? `?companyId=${companyId}` : ''
-      const response = await $fetch<{ status: string, data: ConnectionDetail[] }>(
-        `${apiBase}/router/topology/connections${query}`,
-        {
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
-        },
+      const response = await $apiFetch<{ status: string, data: ConnectionDetail[] }>(
+        `/router/topology/connections${query}`,
       )
 
       if (response && response.status === 'success') {
@@ -179,14 +167,8 @@ export const useTopologyStore = defineStore('topology', () => {
   // Fetch single connection by ID
   async function fetchConnection(id: string) {
     try {
-      const authStore = useAuthStore()
-      const response = await $fetch<{ status: string, data: ConnectionDetail }>(
-        `${apiBase}/router/topology/connections/${id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
-        },
+      const response = await $apiFetch<{ status: string, data: ConnectionDetail }>(
+        `/router/topology/connections/${id}`,
       )
 
       if (response && response.status === 'success') {
@@ -219,18 +201,13 @@ export const useTopologyStore = defineStore('topology', () => {
     error.value = null
 
     try {
-      const authStore = useAuthStore()
-      const response = await $fetch<{
+      const response = await $apiFetch<{
         status: string
         message: string
         data: ConnectionDetail
-      }>(`${apiBase}/router/topology/connections`, {
+      }>(`/router/topology/connections`, {
         method: 'POST',
         body: data,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authStore.token}`,
-        },
       })
 
       if (response && response.status === 'success') {
@@ -270,18 +247,13 @@ export const useTopologyStore = defineStore('topology', () => {
     error.value = null
 
     try {
-      const authStore = useAuthStore()
-      const response = await $fetch<{
+      const response = await $apiFetch<{
         status: string
         message: string
         data: ConnectionDetail
-      }>(`${apiBase}/router/topology/connections/${id}`, {
+      }>(`/router/topology/connections/${id}`, {
         method: 'PUT',
         body: data,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authStore.token}`,
-        },
       })
 
       if (response && response.status === 'success') {
@@ -310,15 +282,11 @@ export const useTopologyStore = defineStore('topology', () => {
     error.value = null
 
     try {
-      const authStore = useAuthStore()
-      const response = await $fetch<{
+      const response = await $apiFetch<{
         status: string
         message: string
-      }>(`${apiBase}/router/topology/connections/${id}`, {
+      }>(`/router/topology/connections/${id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${authStore.token}`,
-        },
       })
 
       if (response && response.status === 'success') {
@@ -361,9 +329,8 @@ export const useTopologyStore = defineStore('topology', () => {
   // Fetch layout positions for a company
   async function fetchLayoutPositions(companyId?: string) {
     try {
-      const authStore = useAuthStore()
       const query = companyId ? `?companyId=${companyId}` : ''
-      const response = await $fetch<{
+      const response = await $apiFetch<{
         status: string
         data: Array<{
           routerId: string
@@ -371,11 +338,7 @@ export const useTopologyStore = defineStore('topology', () => {
           positionY: number
           router?: { id: string, name: string }
         }>
-      }>(`${apiBase}/router/topology/layout${query}`, {
-        headers: {
-          Authorization: `Bearer ${authStore.token}`,
-        },
-      })
+      }>(`/router/topology/layout${query}`)
 
       if (response && response.status === 'success') {
         // Build map of positions
@@ -401,17 +364,12 @@ export const useTopologyStore = defineStore('topology', () => {
     companyId?: string
   }) {
     try {
-      const authStore = useAuthStore()
-      const response = await $fetch<{
+      const response = await $apiFetch<{
         status: string
         message: string
-      }>(`${apiBase}/router/topology/layout`, {
+      }>(`/router/topology/layout`, {
         method: 'POST',
         body: data,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authStore.token}`,
-        },
       })
 
       if (response && response.status === 'success') {
@@ -434,17 +392,12 @@ export const useTopologyStore = defineStore('topology', () => {
     companyId?: string
   }) {
     try {
-      const authStore = useAuthStore()
-      const response = await $fetch<{
+      const response = await $apiFetch<{
         status: string
         message: string
-      }>(`${apiBase}/router/topology/layout/bulk`, {
+      }>(`/router/topology/layout/bulk`, {
         method: 'POST',
         body: data,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authStore.token}`,
-        },
       })
 
       if (response && response.status === 'success') {

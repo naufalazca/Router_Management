@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { useAuthStore } from '../auth'
 
 /**
  * Single Ping Entry
@@ -112,20 +111,15 @@ export const useRouterOSTroubleshootStore = defineStore('routerosTroubleshoot', 
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{
+        const response = await $apiFetch<{
           status: string
           data: PingResult
         }>(
-          `${apiBase}/routeros/troubleshoot/${routerId}/ping`,
+          `/routeros/troubleshoot/${routerId}/ping`,
           {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: params,
           },
         )
@@ -155,20 +149,15 @@ export const useRouterOSTroubleshootStore = defineStore('routerosTroubleshoot', 
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{
+        const response = await $apiFetch<{
           status: string
           data: TracerouteResult
         }>(
-          `${apiBase}/routeros/troubleshoot/${routerId}/traceroute`,
+          `/routeros/troubleshoot/${routerId}/traceroute`,
           {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: params,
           },
         )
@@ -200,21 +189,16 @@ export const useRouterOSTroubleshootStore = defineStore('routerosTroubleshoot', 
       this.continuousPingResults = []
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{
+        const response = await $apiFetch<{
           status: string
           data: PingResult[]
           count: number
         }>(
-          `${apiBase}/routeros/troubleshoot/${routerId}/ping/continuous`,
+          `/routeros/troubleshoot/${routerId}/ping/continuous`,
           {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: params,
           },
         )

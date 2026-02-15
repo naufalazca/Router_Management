@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { useAuthStore } from './auth'
 
 export interface Company {
   id: string
@@ -72,18 +71,9 @@ export const useCompanyStore = defineStore('company', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: Company[] }>(
-          `${apiBase}/companies`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
-        )
+        const response = await $apiFetch<{ status: string, data: Company[] }>('/companies')
 
         this.companies = response.data
         return { success: true, data: response.data }
@@ -106,18 +96,9 @@ export const useCompanyStore = defineStore('company', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: Company }>(
-          `${apiBase}/companies/${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
-        )
+        const response = await $apiFetch<{ status: string, data: Company }>(`/companies/${id}`)
 
         this.currentCompany = response.data
         return { success: true, data: response.data }
@@ -140,18 +121,9 @@ export const useCompanyStore = defineStore('company', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: Company }>(
-          `${apiBase}/companies/code/${code}`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
-        )
+        const response = await $apiFetch<{ status: string, data: Company }>(`/companies/code/${code}`)
 
         this.currentCompany = response.data
         return { success: true, data: response.data }
@@ -174,20 +146,12 @@ export const useCompanyStore = defineStore('company', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: Company }>(
-          `${apiBase}/companies`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-            body: data,
-          },
-        )
+        const response = await $apiFetch<{ status: string, data: Company }>('/companies', {
+          method: 'POST',
+          body: data,
+        })
 
         // Add new company to the list
         this.companies.push(response.data)
@@ -211,20 +175,12 @@ export const useCompanyStore = defineStore('company', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: Company }>(
-          `${apiBase}/companies/${id}`,
-          {
-            method: 'PUT',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-            body: data,
-          },
-        )
+        const response = await $apiFetch<{ status: string, data: Company }>(`/companies/${id}`, {
+          method: 'PUT',
+          body: data,
+        })
 
         // Update company in the list
         const index = this.companies.findIndex(c => c.id === id)
@@ -257,15 +213,10 @@ export const useCompanyStore = defineStore('company', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        await $fetch(`${apiBase}/companies/${id}`, {
+        await $apiFetch(`/companies/${id}`, {
           method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
         })
 
         // Remove company from the list
@@ -296,18 +247,9 @@ export const useCompanyStore = defineStore('company', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<{ status: string, data: CompanyRouter[] }>(
-          `${apiBase}/companies/${companyId}/routers`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
-        )
+        const response = await $apiFetch<{ status: string, data: CompanyRouter[] }>(`/companies/${companyId}/routers`)
 
         this.companyRouters = response.data
         return { success: true, data: response.data }

@@ -5,7 +5,6 @@ import type {
   UpdateBoardInput,
 } from '~/types/kanban-api'
 import { defineStore } from 'pinia'
-import { useAuthStore } from './auth'
 
 interface BoardState {
   boards: Board[]
@@ -28,17 +27,10 @@ export const useKanbanBoardStore = defineStore('kanban-board', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Board[]>>(
-          `${apiBase}/kanban/boards`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<ApiResponse<Board[]>>(
+          `/kanban/boards`,
         )
 
         this.boards = response.data || []
@@ -62,17 +54,10 @@ export const useKanbanBoardStore = defineStore('kanban-board', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Board>>(
-          `${apiBase}/kanban/boards/${boardId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<ApiResponse<Board>>(
+          `/kanban/boards/${boardId}`,
         )
 
         this.currentBoard = response.data || null
@@ -96,17 +81,12 @@ export const useKanbanBoardStore = defineStore('kanban-board', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Board>>(
-          `${apiBase}/kanban/boards`,
+        const response = await $apiFetch<ApiResponse<Board>>(
+          `/kanban/boards`,
           {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: data,
           },
         )
@@ -134,17 +114,12 @@ export const useKanbanBoardStore = defineStore('kanban-board', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Board>>(
-          `${apiBase}/kanban/boards/${boardId}`,
+        const response = await $apiFetch<ApiResponse<Board>>(
+          `/kanban/boards/${boardId}`,
           {
             method: 'PUT',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: data,
           },
         )
@@ -180,15 +155,10 @@ export const useKanbanBoardStore = defineStore('kanban-board', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        await $fetch(`${apiBase}/kanban/boards/${boardId}`, {
+        await $apiFetch(`/kanban/boards/${boardId}`, {
           method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
         })
 
         // Remove board from the list
@@ -219,17 +189,12 @@ export const useKanbanBoardStore = defineStore('kanban-board', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Board>>(
-          `${apiBase}/kanban/boards/${boardId}/archive`,
+        const response = await $apiFetch<ApiResponse<Board>>(
+          `/kanban/boards/${boardId}/archive`,
           {
             method: 'PATCH',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
           },
         )
 
@@ -259,17 +224,12 @@ export const useKanbanBoardStore = defineStore('kanban-board', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Board>>(
-          `${apiBase}/kanban/boards/${boardId}/restore`,
+        const response = await $apiFetch<ApiResponse<Board>>(
+          `/kanban/boards/${boardId}/restore`,
           {
             method: 'PATCH',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
           },
         )
 
@@ -299,17 +259,12 @@ export const useKanbanBoardStore = defineStore('kanban-board', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Board[]>>(
-          `${apiBase}/kanban/boards/reorder`,
+        const response = await $apiFetch<ApiResponse<Board[]>>(
+          `/kanban/boards/reorder`,
           {
             method: 'PATCH',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: { positions },
           },
         )

@@ -5,7 +5,6 @@ import type {
   UpdateLabelInput,
 } from '~/types/kanban-api'
 import { defineStore } from 'pinia'
-import { useAuthStore } from './auth'
 
 interface LabelState {
   labels: Label[]
@@ -26,17 +25,10 @@ export const useKanbanLabelStore = defineStore('kanban-label', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Label[]>>(
-          `${apiBase}/kanban/boards/${boardId}/labels`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          },
+        const response = await $apiFetch<ApiResponse<Label[]>>(
+          `/kanban/boards/${boardId}/labels`,
         )
 
         this.labels = response.data || []
@@ -60,17 +52,12 @@ export const useKanbanLabelStore = defineStore('kanban-label', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Label>>(
-          `${apiBase}/kanban/boards/${boardId}/labels`,
+        const response = await $apiFetch<ApiResponse<Label>>(
+          `/kanban/boards/${boardId}/labels`,
           {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: data,
           },
         )
@@ -98,17 +85,12 @@ export const useKanbanLabelStore = defineStore('kanban-label', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<Label>>(
-          `${apiBase}/kanban/boards/${boardId}/labels/${labelId}`,
+        const response = await $apiFetch<ApiResponse<Label>>(
+          `/kanban/boards/${boardId}/labels/${labelId}`,
           {
             method: 'PUT',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
             body: data,
           },
         )
@@ -139,15 +121,10 @@ export const useKanbanLabelStore = defineStore('kanban-label', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        await $fetch(`${apiBase}/kanban/boards/${boardId}/labels/${labelId}`, {
+        await $apiFetch(`/kanban/boards/${boardId}/labels/${labelId}`, {
           method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
         })
 
         // Remove label from the array
@@ -173,17 +150,12 @@ export const useKanbanLabelStore = defineStore('kanban-label', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        const response = await $fetch<ApiResponse<any>>(
-          `${apiBase}/kanban/tasks/${taskId}/labels/${labelId}`,
+        const response = await $apiFetch<ApiResponse<any>>(
+          `/kanban/tasks/${taskId}/labels/${labelId}`,
           {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
           },
         )
 
@@ -207,15 +179,10 @@ export const useKanbanLabelStore = defineStore('kanban-label', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const authStore = useAuthStore()
-        const apiBase = config.public.apiBase || 'http://localhost:5000/api'
+        const { $apiFetch } = useApiFetch()
 
-        await $fetch(`${apiBase}/kanban/tasks/${taskId}/labels/${labelId}`, {
+        await $apiFetch(`/kanban/tasks/${taskId}/labels/${labelId}`, {
           method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
         })
 
         return { success: true }

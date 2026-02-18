@@ -145,7 +145,7 @@ export const useKanbanLabelStore = defineStore('kanban-label', {
       }
     },
 
-    async addLabelToTask(taskId: string, labelId: string) {
+    async addLabelToTask(boardId: string, taskId: string, labelId: string) {
       this.isLoading = true
       this.error = null
 
@@ -153,7 +153,7 @@ export const useKanbanLabelStore = defineStore('kanban-label', {
         const { $apiFetch } = useApiFetch()
 
         const response = await $apiFetch<ApiResponse<any>>(
-          `/kanban/tasks/${taskId}/labels/${labelId}`,
+          `/kanban/boards/${boardId}/tasks/${taskId}/labels/${labelId}`,
           {
             method: 'POST',
           },
@@ -174,14 +174,14 @@ export const useKanbanLabelStore = defineStore('kanban-label', {
       }
     },
 
-    async removeLabelFromTask(taskId: string, labelId: string) {
+    async removeLabelFromTask(boardId: string, taskId: string, labelId: string) {
       this.isLoading = true
       this.error = null
 
       try {
         const { $apiFetch } = useApiFetch()
 
-        await $apiFetch(`/kanban/tasks/${taskId}/labels/${labelId}`, {
+        await $apiFetch(`/kanban/boards/${boardId}/tasks/${taskId}/labels/${labelId}`, {
           method: 'DELETE',
         })
 

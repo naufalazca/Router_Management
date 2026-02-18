@@ -3,7 +3,8 @@
     "allow": [
       "Skill(frontend-design)",
       "Skill(frontend-design:*)",
-      "Bash(npx prisma generate:*)"
+      "Bash(npx prisma generate:*)",
+      "Bash(npm run lint)"
     ]
   }
 }

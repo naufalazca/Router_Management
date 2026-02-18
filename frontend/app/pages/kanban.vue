@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import KanbanBoard from '~/components/kanban/KanbanBoard.vue'
+import KanbanLabels from '~/components/kanban/KanbanLabels.vue'
 import { useKanbanBoardStore } from '~/stores/kanban-board'
 import { useKanbanListStore } from '~/stores/kanban-list'
 import { useKanbanStore } from '~/stores/kanban'
@@ -11,7 +12,9 @@ const listStore = useKanbanListStore()
 const showNewColumn = ref(false)
 const showNewBoard = ref(false)
 const showBoardSelector = ref(false)
+const showLabelsPanel = ref(false)
 const newColumnTitle = ref('')
+const newColumnColor = ref('')
 const newBoardData = reactive({
   name: '',
   description: '',
@@ -38,13 +41,30 @@ async function createColumn() {
 
   const result = await listStore.createList(kanbanStore.selectedBoardId, {
     name: newColumnTitle.value.trim(),
+    color: newColumnColor.value || undefined,
   })
 
   if (result.success) {
     newColumnTitle.value = ''
+    newColumnColor.value = ''
     showNewColumn.value = false
   }
 }
+
+function createPresetList(name: string, color: string) {
+  if (!kanbanStore.selectedBoardId)
+    return
+
+  listStore.createList(kanbanStore.selectedBoardId, { name, color })
+  showNewColumn.value = false
+}
+
+// Preset list templates
+const listPresets = [
+  { name: 'Done', color: '#22c55e' },      // Green
+  { name: 'Selesai', color: '#22c55e' },   // Green
+  { name: 'Finish', color: '#22c55e' },    // Green
+]
 
 async function createBoard() {
   if (!newBoardData.name.trim())
@@ -83,11 +103,19 @@ const isLoading = computed(() => boardStore.isLoading || listStore.isLoading)
             v-if="kanbanStore.selectedBoard"
             variant="outline"
             size="sm"
+            class="gap-1.5"
             @click="showBoardSelector = true"
           >
-            <Icon :name="kanbanStore.selectedBoard?.icon || 'lucide:layout-dashboard'" class="mr-2" />
-            {{ kanbanStore.selectedBoard?.name }}
-            <Icon name="lucide:chevron-down" class="ml-2" />
+            <Icon :name="kanbanStore.selectedBoard?.icon || 'lucide:layout-dashboard'" />
+            <span
+              v-if="kanbanStore.selectedBoard?.color"
+              class="size-2.5 rounded-full"
+              :style="{ backgroundColor: kanbanStore.selectedBoard.color }"
+            />
+            <span :style="{ color: kanbanStore.selectedBoard?.color || undefined }">
+              {{ kanbanStore.selectedBoard?.name }}
+            </span>
+            <Icon name="lucide:chevron-down" class="text-muted-foreground" />
           </Button>
           <div v-else>
             <h2 class="text-2xl font-bold tracking-tight">
@@ -99,6 +127,10 @@ const isLoading = computed(() => boardStore.isLoading || listStore.isLoading)
           </div>
         </div>
         <div class="flex items-center gap-2">
+          <Button v-if="kanbanStore.selectedBoardId" size="sm" variant="outline" @click="showLabelsPanel = true">
+            <Icon name="lucide:tags" class="mr-2" />
+            Labels
+          </Button>
           <Button v-if="kanbanStore.selectedBoardId" size="sm" variant="outline" @click="showNewColumn = true">
             <Icon name="lucide:plus" />
             Add List
@@ -146,8 +178,56 @@ const isLoading = computed(() => boardStore.isLoading || listStore.isLoading)
             Add a new list to the board
           </DialogDescription>
         </DialogHeader>
-        <form name="newColumnForm" class="flex flex-col gap-3" @submit.prevent="createColumn">
-          <Input v-model="newColumnTitle" placeholder="List title (e.g., To Do, In Progress, Done)" />
+        <form name="newColumnForm" class="flex flex-col gap-4" @submit.prevent="createColumn">
+          <div class="grid gap-2">
+            <Label for="list-name">List Name</Label>
+            <Input
+              id="list-name"
+              v-model="newColumnTitle"
+              placeholder="e.g., To Do, In Progress, Done"
+              required
+            />
+          </div>
+          <div class="grid gap-2">
+            <Label for="list-color">Color (optional)</Label>
+            <div class="flex items-center gap-3">
+              <Input
+                id="list-color"
+                v-model="newColumnColor"
+                type="color"
+                class="size-12 p-1 cursor-pointer"
+              />
+              <Input
+                v-model="newColumnColor"
+                type="text"
+                placeholder="#3b82f6"
+                pattern="^#[0-9A-Fa-f]{6}$"
+                class="flex-1"
+              />
+            </div>
+          </div>
+          <!-- Quick Presets -->
+          <div class="grid gap-2">
+            <Label>Quick Presets</Label>
+            <div class="flex flex-wrap gap-2">
+              <Button
+                v-for="preset in listPresets"
+                :key="preset.name"
+                type="button"
+                variant="outline"
+                size="sm"
+                class="gap-1.5"
+                :style="{
+                  borderColor: preset.color,
+                  color: preset.color,
+                }"
+                @click="createPresetList(preset.name, preset.color)"
+              >
+                <span class="size-2 rounded-full" :style="{ backgroundColor: preset.color }" />
+                {{ preset.name }}
+              </Button>
+            </div>
+          </div>
         </form>
         <DialogFooter>
           <Button variant="secondary" @click="showNewColumn = false">
@@ -236,18 +316,39 @@ const isLoading = computed(() => boardStore.isLoading || listStore.isLoading)
             :key="board.id"
             class="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors text-left"
             :class="{ 'bg-accent': board.id === kanbanStore.selectedBoardId }"
+            :style="{
+              borderColor: board.color || undefined,
+              ...(board.id === kanbanStore.selectedBoardId && board.color ? {
+                backgroundColor: `${board.color}20`,
+                borderColor: board.color,
+              } : {}),
+            }"
             @click="selectBoard(board.id)"
           >
-            <Icon :name="board.icon || 'lucide:layout-dashboard'" class="size-6" />
-            <div class="flex-1">
-              <div class="font-medium">
+            <Icon
+              :name="board.icon || 'lucide:layout-dashboard'"
+              class="size-6"
+              :style="{ color: board.color || undefined }"
+            />
+            <div
+              v-if="board.color"
+              class="size-3 rounded-full shrink-0"
+              :style="{ backgroundColor: board.color }"
+            />
+            <div class="flex-1 min-w-0">
+              <div class="font-medium truncate">
                 {{ board.name }}
               </div>
               <div v-if="board.description" class="text-sm text-muted-foreground line-clamp-1">
                 {{ board.description }}
               </div>
             </div>
-            <Icon v-if="board.id === kanbanStore.selectedBoardId" name="lucide:check" class="size-5 text-primary" />
+            <Icon
+              v-if="board.id === kanbanStore.selectedBoardId"
+              name="lucide:check"
+              class="size-5 shrink-0"
+              :style="{ color: board.color || 'hsl(var(--primary))' }"
+            />
           </button>
         </div>
         <DialogFooter class="gap-2">
@@ -256,6 +357,24 @@ const isLoading = computed(() => boardStore.isLoading || listStore.isLoading)
             New Board
           </Button>
           <Button variant="secondary" @click="showBoardSelector = false">
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Labels Panel Dialog -->
+    <Dialog v-model:open="showLabelsPanel">
+      <DialogContent class="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Manage Labels</DialogTitle>
+          <DialogDescription>
+            Create and manage labels for your tasks
+          </DialogDescription>
+        </DialogHeader>
+        <KanbanLabels v-if="kanbanStore.selectedBoardId" :board-id="kanbanStore.selectedBoardId" />
+        <DialogFooter>
+          <Button variant="secondary" @click="showLabelsPanel = false">
             Close
           </Button>
         </DialogFooter>

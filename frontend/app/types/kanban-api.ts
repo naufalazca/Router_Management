@@ -47,6 +47,7 @@ export interface BoardList {
   boardId: string
   name: string
   position: number
+  color?: string | null
   isArchived: boolean
   createdAt: string
   updatedAt: string
@@ -163,6 +164,7 @@ export interface UpdateBoardInput {
 
 export interface CreateListInput {
   name: string
+  color?: string
 }
 
 export interface UpdateListInput {

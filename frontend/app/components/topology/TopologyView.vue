@@ -3,9 +3,9 @@ import type { Connection, Edge, Node } from '@vue-flow/core'
 import type { TopologyEdge, TopologyNode } from '~/stores/router/router.topology'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
-import { MarkerType, Position } from '@vue-flow/core'
-import { useVueFlow, VueFlow } from '@vue-flow/core'
+import { MarkerType, Position, useVueFlow, VueFlow } from '@vue-flow/core'
 import { computed, ref, watch } from 'vue'
+import TopologyConnections from '~/components/topology/TopologyConnections.vue'
 import { useTopologyStore } from '~/stores/router/router.topology'
 
 // Props
@@ -348,10 +348,12 @@ function getNodeName(nodeId: string): string {
 }
 
 // Delete connection
-async function handleDeleteEdge(_edgeId: string) {
+async function handleDeleteEdge(edgeId: string) {
   // This would call the store to delete
   // TODO: Implement actual delete functionality
+  await topologyStore.deleteConnection(edgeId)
   isEdgeDetailOpen.value = false
+  emit('connectionCreated') // Refresh topology after delete
 }
 
 // Delete node (not implemented - nodes are routers)
@@ -677,124 +679,13 @@ async function handleDeleteEdge(_edgeId: string) {
     </div>
 
     <!-- Edge Detail Dialog -->
-    <div
-      v-if="isEdgeDetailOpen && selectedEdge"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      @click.self="isEdgeDetailOpen = false"
-    >
-      <div class="bg-card rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold">
-            Connection Details
-          </h3>
-          <button
-            class="text-muted-foreground hover:text-foreground"
-            @click="isEdgeDetailOpen = false"
-          >
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <div class="space-y-3">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <p class="text-sm text-muted-foreground">
-                Type
-              </p>
-              <span
-                class="inline-flex px-2 py-0.5 rounded text-xs font-medium"
-                :class="{
-                  'bg-green-100 text-green-800': selectedEdge.linkType === 'ETHERNET',
-                  'bg-blue-100 text-blue-800': selectedEdge.linkType === 'FIBER',
-                  'bg-orange-100 text-orange-800': selectedEdge.linkType === 'WIRELESS',
-                  'bg-purple-100 text-purple-800': selectedEdge.linkType === 'VPN',
-                }"
-              >
-                {{ selectedEdge.linkType }}
-              </span>
-            </div>
-            <div>
-              <p class="text-sm text-muted-foreground">
-                Status
-              </p>
-              <span
-                class="inline-flex px-2 py-0.5 rounded text-xs font-medium"
-                :class="{
-                  'bg-green-100 text-green-800': selectedEdge.linkStatus === 'ACTIVE',
-                  'bg-red-100 text-red-800': selectedEdge.linkStatus === 'INACTIVE',
-                  'bg-gray-100 text-gray-800': selectedEdge.linkStatus === 'PLANNED',
-                }"
-              >
-                {{ selectedEdge.linkStatus }}
-              </span>
-            </div>
-          </div>
-
-          <div v-if="selectedEdge.bandwidth">
-            <p class="text-sm text-muted-foreground">
-              Bandwidth
-            </p>
-            <p class="font-medium">
-              {{ selectedEdge.bandwidth }}
-            </p>
-          </div>
-
-          <div v-if="selectedEdge.distance" class="grid grid-cols-2 gap-4">
-            <div>
-              <p class="text-sm text-muted-foreground">
-                Distance
-              </p>
-              <p class="font-medium">
-                {{ selectedEdge.distance }}m
-              </p>
-            </div>
-          </div>
-
-          <div v-if="selectedEdge.sourceInterface || selectedEdge.targetInterface" class="grid grid-cols-2 gap-4">
-            <div v-if="selectedEdge.sourceInterface">
-              <p class="text-sm text-muted-foreground">
-                Source Interface
-              </p>
-              <p class="font-medium font-mono text-xs">
-                {{ selectedEdge.sourceInterface }}
-              </p>
-            </div>
-            <div v-if="selectedEdge.targetInterface">
-              <p class="text-sm text-muted-foreground">
-                Target Interface
-              </p>
-              <p class="font-medium font-mono text-xs">
-                {{ selectedEdge.targetInterface }}
-              </p>
-            </div>
-          </div>
-
-          <div v-if="selectedEdge.isAutoDiscovered" class="flex items-center gap-2 text-sm text-blue-600">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11-9 11zM4 14v6" />
-            </svg>
-            Auto-discovered connection
-          </div>
-        </div>
-
-        <div class="mt-6 flex justify-between">
-          <button
-            class="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90"
-            @click="handleDeleteEdge(selectedEdge.id)"
-          >
-            Delete
-          </button>
-          <button
-            class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-            @click="isEdgeDetailOpen = false"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
+    <TopologyConnections
+      :is-open="isEdgeDetailOpen"
+      :edge="selectedEdge"
+      @close="isEdgeDetailOpen = false"
+      @delete="handleDeleteEdge"
+      @updated="emit('connectionCreated')"
+    />
 
     <!-- Legend -->
     <div class="mt-4 rounded-lg border bg-card p-4">

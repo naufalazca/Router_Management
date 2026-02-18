@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DateValue } from '@internationalized/date'
 import type { UseTimeAgoMessages, UseTimeAgoOptions, UseTimeAgoUnitNamesDefault } from '@vueuse/core'
-import type { Task as ApiTask, BoardList, TaskPriority } from '~/types/kanban-api'
+import type { Task as ApiTask, BoardList, TaskPriority, Label } from '~/types/kanban-api'
 import {
   CalendarDateTime,
   DateFormatter,
@@ -11,6 +11,7 @@ import {
 import Draggable from 'vuedraggable'
 import { useKanbanStore } from '~/stores/kanban'
 import { useKanbanAttachmentStore } from '~/stores/kanban-attachment'
+import { useKanbanLabelStore } from '~/stores/kanban-label'
 import { useKanbanListStore } from '~/stores/kanban-list'
 import { useKanbanTaskStore } from '~/stores/kanban-task'
 import CardFooter from '../ui/card/CardFooter.vue'
@@ -19,6 +20,10 @@ const kanbanStore = useKanbanStore()
 const listStore = useKanbanListStore()
 const taskStore = useKanbanTaskStore()
 const attachmentStore = useKanbanAttachmentStore()
+const labelStore = useKanbanLabelStore()
+
+// Selected labels for task
+const selectedLabelIds = ref<string[]>([])
 
 const df = new DateFormatter('en-US', {
   dateStyle: 'medium',
@@ -84,6 +89,7 @@ function resetData() {
   newTask.startDate = undefined
   newTask.estimatedHours = undefined
   selectedFile.value = null
+  selectedLabelIds.value = []
   attachmentStore.clearAttachments()
 }
 
@@ -167,6 +173,11 @@ async function createTask() {
   )
 
   if (result.success && result.data) {
+    // Assign labels to task
+    for (const labelId of selectedLabelIds.value) {
+      await labelStore.addLabelToTask(kanbanStore.selectedBoardId, result.data.id, labelId)
+    }
+
     // If there's a file selected, upload it after creating the task
     if (selectedFile.value) {
       await attachmentStore.uploadAttachment(
@@ -183,6 +194,10 @@ async function createTask() {
 
 async function editTask() {
   if (!showModalTask.value.listId || !showModalTask.value.taskId || !newTask.title.trim() || !kanbanStore.selectedBoardId)
+    return
+
+  const task = getTaskFromList(showModalTask.value.listId, showModalTask.value.taskId)
+  if (!task)
     return
 
   const payload = {
@@ -202,6 +217,23 @@ async function editTask() {
   )
 
   if (result.success) {
+    // Sync labels: remove old ones, add new ones
+    const currentLabelIds = task.taskLabels?.map(tl => tl.labelId) || []
+
+    // Remove labels that are no longer selected
+    for (const labelId of currentLabelIds) {
+      if (!selectedLabelIds.value.includes(labelId)) {
+        await labelStore.removeLabelFromTask(kanbanStore.selectedBoardId, showModalTask.value.taskId!, labelId)
+      }
+    }
+
+    // Add new labels
+    for (const labelId of selectedLabelIds.value) {
+      if (!currentLabelIds.includes(labelId)) {
+        await labelStore.addLabelToTask(kanbanStore.selectedBoardId, showModalTask.value.taskId!, labelId)
+      }
+    }
+
     showModalTask.value.open = false
     // Refresh tasks for this list
     await loadTasksForList(showModalTask.value.listId)
@@ -227,11 +259,36 @@ async function showEditTask(listId: string, taskId: string) {
     dueTime.value = `${dueDate.value.hour < 10 ? `0${dueDate.value?.hour}` : dueDate.value?.hour}:${dueDate.value.minute < 10 ? `0${dueDate.value?.minute}` : dueDate.value?.minute}`
   }
 
+  // Load existing labels
+  selectedLabelIds.value = task.taskLabels?.map(tl => tl.labelId) || []
+
   showModalTask.value = { type: 'edit', open: true, listId, taskId }
 
   // Fetch attachments for this task
   await attachmentStore.fetchTaskAttachments(taskId)
 }
+
+// Label helper functions
+function toggleLabel(labelId: string) {
+  const index = selectedLabelIds.value.indexOf(labelId)
+  if (index === -1) {
+    selectedLabelIds.value.push(labelId)
+  }
+  else {
+    selectedLabelIds.value.splice(index, 1)
+  }
+}
+
+function isLabelSelected(labelId: string): boolean {
+  return selectedLabelIds.value.includes(labelId)
+}
+
+// Fetch labels when board changes
+watch(() => kanbanStore.selectedBoardId, async (newBoardId) => {
+  if (newBoardId) {
+    await labelStore.fetchBoardLabels(newBoardId)
+  }
+}, { immediate: true })
 
 async function onTaskUpdated() {
   // Refresh tasks when a task is updated from the view modal
@@ -431,15 +488,29 @@ function isCompletedList(listName: string): boolean {
       @end="onColumnDrop"
     >
       <template #item="{ element: list }: { element: BoardList }">
-        <Card class="w-[272px] shrink-0 py-2 gap-4 self-start">
-          <CardHeader class="flex flex-row items-center justify-between gap-2 px-2">
+        <Card
+          class="w-[272px] shrink-0 py-2 gap-4 self-start transition-colors"
+          :style="list.color ? { borderColor: list.color, borderWidth: '2px' } : {}"
+        >
+          <CardHeader
+            class="flex flex-row items-center justify-between gap-2 px-2 rounded-md"
+            :style="list.color ? { backgroundColor: `${list.color}15` } : {}"
+          >
             <CardTitle class="font-semibold text-base flex items-center gap-2">
               <Icon name="lucide:grip-vertical" class="col-handle cursor-grab opacity-60" />
               <span
                 :id="`col-title-${list.id}`"
-                contenteditable="true" class="hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 px-1 rounded"
-                @blur="onUpdateColumn($event, list.id)" @keydown.enter.prevent
+                contenteditable="true"
+                class="hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 px-1 rounded"
+                :style="{ color: list.color || undefined }"
+                @blur="onUpdateColumn($event, list.id)"
+                @keydown.enter.prevent
               >{{ list.name }}</span>
+              <div
+                v-if="list.color"
+                class="size-2 rounded-full"
+                :style="{ backgroundColor: list.color }"
+              />
               <Badge variant="secondary" class="h-5 min-w-5 px-1 font-mono tabular-nums">
                 {{ getTasksForList(list.id).length }}
               </Badge>
@@ -650,6 +721,36 @@ function isCompletedList(listName: string): boolean {
 
           <Label>Estimated Hours</Label>
           <Input v-model.number="newTask.estimatedHours" type="number" min="0" step="0.5" placeholder="Hours (optional)" />
+        </div>
+
+        <!-- Labels Section -->
+        <div class="border-t pt-4 mt-2">
+          <Label class="text-sm font-semibold mb-3 block">Labels</Label>
+          <div v-if="labelStore.labels.length > 0" class="flex flex-wrap gap-2">
+            <button
+              v-for="label in labelStore.labels"
+              :key="label.id"
+              type="button"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium border transition-all"
+              :class="isLabelSelected(label.id)
+                ? 'bg-primary/10 border-primary'
+                : 'bg-transparent border-border hover:bg-accent'"
+              :style="isLabelSelected(label.id) ? { borderColor: label.color, color: label.color } : {}"
+              @click="toggleLabel(label.id)"
+            >
+              <span class="size-2 rounded-full" :style="{ backgroundColor: label.color }" />
+              {{ label.name }}
+              <Icon
+                v-if="isLabelSelected(label.id)"
+                name="lucide:check"
+                class="size-3"
+                :style="{ color: label.color }"
+              />
+            </button>
+          </div>
+          <div v-else class="text-sm text-muted-foreground py-2">
+            No labels available. Create labels from the board settings.
+          </div>
         </div>
 
         <!-- Attachments Section -->

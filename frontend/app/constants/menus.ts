@@ -83,6 +83,11 @@ export const navMenu: NavMenu[] = [
         link: '/topology',
       },
       {
+        title: 'IP Info',
+        icon: 'i-lucide-globe',
+        link: '/ipinfo',
+      },
+      {
         title: 'Kanban Board',
         icon: 'i-lucide-kanban',
         link: '/kanban',

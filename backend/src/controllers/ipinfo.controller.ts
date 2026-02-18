@@ -7,7 +7,7 @@ export const ipinfoController = {
    * Get IP information
    * GET /api/ipinfo/ip/:ip
    */
-  async getIPInfo(req: Request, res: Response) {
+  async getIPInfo(req: Request, res: Response): Promise<void> {
     try {
       const { ip } = ipParamSchema.parse({ ip: req.params.ip });
       const result = await ipinfoService.getIPInfo(ip);
@@ -18,10 +18,11 @@ export const ipinfoController = {
       });
     } catch (error) {
       if (error instanceof Error && error.name === 'ZodError') {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: error.message
         });
+        return;
       }
       res.status(500).json({
         success: false,

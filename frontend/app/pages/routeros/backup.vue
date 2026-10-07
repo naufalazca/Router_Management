@@ -78,9 +78,8 @@ function openDeleteDialog(backup: RouterBackup) {
 // Handle download
 async function handleDownload(backup: RouterBackup) {
   try {
-    const filename = `${backup.router?.name || 'router'}-${new Date(backup.createdAt).toISOString().split('T')[0]}.rsc`
-    await backupStore.downloadBackup(backup.id, filename)
-    toast.success('Download started')
+    const url = await backupStore.getDownloadUrl(backup.id)
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
   catch (error) {
     toast.error('Failed to download backup')

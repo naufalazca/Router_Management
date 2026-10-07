@@ -23,7 +23,7 @@ export interface JwtPayload {
  * @param token - JWT token string
  * @returns Decoded payload or null if invalid
  */
-export function decodeJwt(token: string): JwtPayload | null {
+function decodeJwt(token: string): JwtPayload | null {
   try {
     // JWT format: header.payload.signature
     const parts = token.split('.')
@@ -73,26 +73,6 @@ export function isTokenExpired(token: string): boolean {
   const buffer = 5000
 
   return currentTime >= (expirationTime - buffer)
-}
-
-/**
- * Get time until token expires in milliseconds
- *
- * @param token - JWT token string
- * @returns Milliseconds until expiry, or 0 if already expired/invalid
- */
-export function getTokenExpiryTime(token: string): number {
-  const decoded = decodeJwt(token)
-
-  if (!decoded || !decoded.exp) {
-    return 0
-  }
-
-  const expirationTime = decoded.exp * 1000
-  const currentTime = Date.now()
-  const timeLeft = expirationTime - currentTime
-
-  return Math.max(0, timeLeft)
 }
 
 /**

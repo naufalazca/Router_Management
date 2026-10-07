@@ -9,7 +9,7 @@ defineProps<{
   }
 }>()
 
-const { isMobile, setOpenMobile } = useSidebar()
+const { isMobile } = useSidebar()
 
 function handleLogout() {
   navigateTo('/login')
@@ -61,12 +61,6 @@ const showModalTheme = ref(false)
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem as-child>
-              <NuxtLink to="/settings" @click="setOpenMobile(false)">
-                <Icon name="i-lucide-settings" />
-                Settings
-              </NuxtLink>
-            </DropdownMenuItem>
             <DropdownMenuItem @click="showModalTheme = true">
               <Icon name="i-lucide-paintbrush" />
               Theme

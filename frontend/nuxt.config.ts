@@ -26,10 +26,6 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     '@nuxtjs/color-mode',
     '@nuxt/fonts',
-    '@nuxt/content',
-    '@nuxt/hints',
-    '@nuxt/image',
-    '@nuxt/scripts',
     '@nuxt/ui',
   ],
 
@@ -59,11 +55,6 @@ export default defineNuxtConfig({
     defaults: {
       weights: [300, 400, 500, 600, 700, 800],
     },
-  },
-
-  routeRules: {
-    '/components': { redirect: '/components/accordion' },
-    '/settings': { redirect: '/settings/profile' },
   },
 
   imports: {

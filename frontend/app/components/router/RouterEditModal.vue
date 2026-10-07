@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Router, UpdateRouterInput } from '~/stores/router'
-import { onMounted, ref, watch } from 'vue'
+import { Building2, KeyRound, Monitor, Network } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,6 +12,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
 import { useCompanyStore } from '~/stores/company'
 import { useRouterStore } from '~/stores/router'
 
@@ -43,6 +53,33 @@ const formData = ref<UpdateRouterInput>({
   apiPort: 8728,
   sshPort: 22,
 })
+
+const NONE = '__none__'
+
+const companyIdProxy = computed({
+  get: () => formData.value.companyId || NONE,
+  set: (val: string) => {
+    formData.value.companyId = val === NONE ? '' : val
+  },
+})
+
+const routerTypes = [
+  { value: 'UPSTREAM', label: 'Upstream (BGP)' },
+  { value: 'CORE', label: 'Core Management' },
+  { value: 'DISTRIBUSI', label: 'Distribusi' },
+  { value: 'WIRELESS', label: 'Wireless PTP' },
+]
+
+const routerBrands = [
+  { value: 'MIKROTIK', label: 'MikroTik' },
+  { value: 'UBIVIQUITI', label: 'Ubiquiti' },
+]
+
+const statuses = [
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'INACTIVE', label: 'Inactive' },
+  { value: 'MAINTENANCE', label: 'Maintenance' },
+]
 
 // Load companies on mount
 onMounted(async () => {
@@ -103,7 +140,7 @@ async function handleSubmit() {
 
 <template>
   <Dialog :open="props.open" @update:open="(val) => emit('update:open', val)">
-    <DialogContent class="sm:max-w-[500px] dialog-content">
+    <DialogContent class="sm:max-w-[640px] max-h-[90vh] overflow-y-auto dialog-content">
       <DialogHeader>
         <DialogTitle class="font-mono">
           Update Device
@@ -113,175 +150,202 @@ async function handleSubmit() {
         </DialogDescription>
       </DialogHeader>
 
-      <form class="space-y-4 mt-4" @submit.prevent="handleSubmit">
-        <div class="grid grid-cols-2 gap-4">
-          <div class="col-span-2 space-y-2">
-            <label class="text-sm font-medium font-mono">Device Name *</label>
-            <Input
-              v-model="formData.name"
-              placeholder="Router-01"
-              required
-              class="font-mono"
-            />
+      <form class="space-y-6 mt-2" @submit.prevent="handleSubmit">
+        <!-- Identity -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-2 text-xs font-medium text-muted-foreground font-mono uppercase tracking-wider">
+            <Monitor class="h-3.5 w-3.5" />
+            Device Identity
           </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium font-mono">IP Address *</label>
-            <Input
-              v-model="formData.ipAddress"
-              placeholder="192.168.1.1"
-              required
-              class="font-mono"
-            />
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium font-mono">MAC Address</label>
-            <Input
-              v-model="formData.macAddress"
-              placeholder="00:00:00:00:00:00"
-              class="font-mono"
-            />
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium font-mono">Model</label>
-            <Input
-              v-model="formData.model"
-              placeholder="RB4011"
-              class="font-mono"
-            />
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium font-mono">Location</label>
-            <Input
-              v-model="formData.location"
-              placeholder="Main Office"
-              class="font-mono"
-            />
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium font-mono">Company</label>
-            <select
-              v-model="formData.companyId"
-              class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono"
-            >
-              <option value="">
-                No Company (Standalone)
-              </option>
-              <option
-                v-for="company in companyStore.companies"
-                :key="company.id"
-                :value="company.id"
-              >
-                {{ company.name }} ({{ company.code }})
-              </option>
-            </select>
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium font-mono">Router Type</label>
-            <select
-              v-model="formData.routerType"
-              class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono"
-            >
-              <option value="UPSTREAM">
-                Upstream (BGP)
-              </option>
-              <option value="CORE">
-                Core Management
-              </option>
-              <option value="DISTRIBUSI">
-                Distribusi
-              </option>
-              <option value="WIRELESS">
-                Wireless PTP
-              </option>
-            </select>
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium font-mono">Router Brand</label>
-            <select
-              v-model="formData.routerBrand"
-              class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono"
-            >
-              <option value="MIKROTIK">
-                MikroTik
-              </option>
-              <option value="UBIVIQUITI">
-                Ubiquiti
-              </option>
-            </select>
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium font-mono">Status</label>
-            <select
-              v-model="formData.status"
-              class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono"
-            >
-              <option value="ACTIVE">
-                Active
-              </option>
-              <option value="INACTIVE">
-                Inactive
-              </option>
-              <option value="MAINTENANCE">
-                Maintenance
-              </option>
-            </select>
-          </div>
-
-          <div class="col-span-2 pt-2 border-t">
-            <h4 class="text-sm font-semibold font-mono mb-3 text-primary">
-              RouterOS Credentials
-            </h4>
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium font-mono">Username</label>
-            <Input
-              v-model="formData.username"
-              placeholder="admin"
-              class="font-mono"
-            />
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium font-mono">Password (leave empty to keep current)</label>
-            <Input
-              v-model="formData.password"
-              type="password"
-              placeholder="••••••••"
-              class="font-mono"
-            />
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium font-mono">API Port</label>
-            <Input
-              v-model.number="formData.apiPort"
-              type="number"
-              placeholder="8728"
-              class="font-mono"
-            />
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium font-mono">SSH Port</label>
-            <Input
-              v-model.number="formData.sshPort"
-              type="number"
-              placeholder="22"
-              class="font-mono"
-            />
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="col-span-2 space-y-1.5">
+              <Label class="text-sm">Device Name <span class="text-destructive">*</span></Label>
+              <Input
+                v-model="formData.name"
+                placeholder="Router-01"
+                required
+                class="font-mono"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <Label class="text-sm">Model</Label>
+              <Input
+                v-model="formData.model"
+                placeholder="RB4011"
+                class="font-mono"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <Label class="text-sm">Location</Label>
+              <Input
+                v-model="formData.location"
+                placeholder="Main Office"
+                class="font-mono"
+              />
+            </div>
           </div>
         </div>
 
-        <div class="flex justify-end gap-3 pt-4 border-t">
+        <Separator />
+
+        <!-- Network -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-2 text-xs font-medium text-muted-foreground font-mono uppercase tracking-wider">
+            <Network class="h-3.5 w-3.5" />
+            Network Configuration
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-1.5">
+              <Label class="text-sm">IP Address <span class="text-destructive">*</span></Label>
+              <Input
+                v-model="formData.ipAddress"
+                placeholder="192.168.1.1"
+                required
+                class="font-mono"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <Label class="text-sm">MAC Address</Label>
+              <Input
+                v-model="formData.macAddress"
+                placeholder="00:00:00:00:00:00"
+                class="font-mono"
+              />
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        <!-- Management -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-2 text-xs font-medium text-muted-foreground font-mono uppercase tracking-wider">
+            <Building2 class="h-3.5 w-3.5" />
+            Management
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-1.5">
+              <Label class="text-sm">Company</Label>
+              <Select v-model="companyIdProxy">
+                <SelectTrigger class="font-mono">
+                  <SelectValue placeholder="No Company (Standalone)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem :value="NONE">
+                    No Company (Standalone)
+                  </SelectItem>
+                  <SelectItem
+                    v-for="company in companyStore.companies"
+                    :key="company.id"
+                    :value="company.id"
+                  >
+                    {{ company.name }} ({{ company.code }})
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div class="space-y-1.5">
+              <Label class="text-sm">Router Type</Label>
+              <Select v-model="formData.routerType">
+                <SelectTrigger class="font-mono">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="type in routerTypes"
+                    :key="type.value"
+                    :value="type.value"
+                  >
+                    {{ type.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div class="space-y-1.5">
+              <Label class="text-sm">Router Brand</Label>
+              <Select v-model="formData.routerBrand">
+                <SelectTrigger class="font-mono">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="brand in routerBrands"
+                    :key="brand.value"
+                    :value="brand.value"
+                  >
+                    {{ brand.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div class="space-y-1.5">
+              <Label class="text-sm">Status</Label>
+              <Select v-model="formData.status">
+                <SelectTrigger class="font-mono">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="status in statuses"
+                    :key="status.value"
+                    :value="status.value"
+                  >
+                    {{ status.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        <!-- Credentials -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-2 text-xs font-medium text-muted-foreground font-mono uppercase tracking-wider">
+            <KeyRound class="h-3.5 w-3.5" />
+            RouterOS Credentials
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-1.5">
+              <Label class="text-sm">Username</Label>
+              <Input
+                v-model="formData.username"
+                placeholder="admin"
+                class="font-mono"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <Label class="text-sm">Password <span class="text-xs font-normal text-muted-foreground">(empty = keep current)</span></Label>
+              <Input
+                v-model="formData.password"
+                type="password"
+                placeholder="••••••••"
+                class="font-mono"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <Label class="text-sm">API Port</Label>
+              <Input
+                v-model.number="formData.apiPort"
+                type="number"
+                placeholder="8728"
+                class="font-mono"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <Label class="text-sm">SSH Port</Label>
+              <Input
+                v-model.number="formData.sshPort"
+                type="number"
+                placeholder="22"
+                class="font-mono"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-2">
           <Button
             type="button"
             variant="outline"

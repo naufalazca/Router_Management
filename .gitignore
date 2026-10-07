@@ -58,3 +58,6 @@ prisma/migrations/
 
 # Skills
 .kilocode/skills/
+
+# Graphify
+graphify-out/

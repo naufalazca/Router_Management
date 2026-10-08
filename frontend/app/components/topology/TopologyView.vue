@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { Connection, Edge, Node } from '@vue-flow/core'
+import type { Connection, EdgeMouseEvent, NodeMouseEvent } from '@vue-flow/core'
 import type { TopologyEdge, TopologyNode } from '~/stores/router/router.topology'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
-import { MarkerType, Position, useVueFlow, VueFlow } from '@vue-flow/core'
-import { computed, ref, watch } from 'vue'
+import { ConnectionMode, MarkerType, Position, useVueFlow, VueFlow } from '@vue-flow/core'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { toast } from 'vue-sonner'
 import TopologyConnections from '~/components/topology/TopologyConnections.vue'
 import { useTopologyStore } from '~/stores/router/router.topology'
 
@@ -26,14 +27,18 @@ const emit = defineEmits<{
 const topologyStore = useTopologyStore()
 
 // VueFlow instance for getting node positions
-const { onNodeDragStop, onPaneReady } = useVueFlow()
+const { onNodeDragStop, onPaneReady, startConnection } = useVueFlow()
 
-// Flow nodes - use ref instead of computed for mutability
-const flowNodes = ref<Node[]>([])
+// Flow nodes/edges - any[] because motion-v's HTMLAttributes augmentation makes vue-flow Node/Edge
+// literal checks explode (TS2589/TS2322). Restore Node[]/Edge[] when @vue-flow and motion-v types align.
+const flowNodes = ref<any[]>([])
 
-// Flow edges - can stay computed
-const flowEdges = computed<Edge[]>(() => {
-  return props.edges.map(edge => ({
+// Flow edges - ref so Vue Flow can write temp connect edges back
+const flowEdges = ref<any[]>([])
+
+// Sync flowEdges from props (does not clobber in-flight temp edges)
+function syncEdges() {
+  flowEdges.value = props.edges.map(edge => ({
     id: edge.id,
     source: edge.source,
     target: edge.target,
@@ -45,7 +50,7 @@ const flowEdges = computed<Edge[]>(() => {
     markerEnd: MarkerType.ArrowClosed,
     animated: edge.linkStatus === 'ACTIVE',
   }))
-})
+}
 
 // Debounced save function
 const saveTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
@@ -136,6 +141,11 @@ watch(() => props.nodes, () => {
   initializeNodes()
 }, { deep: true, immediate: true })
 
+// Watch for changes in props.edges
+watch(() => props.edges, () => {
+  syncEdges()
+}, { deep: true, immediate: true })
+
 // Selected node/edge for details
 const selectedNode = ref<TopologyNode | null>(null)
 const selectedEdge = ref<TopologyEdge | null>(null)
@@ -169,6 +179,22 @@ const newConnection = ref<{
 })
 
 const pendingConnection = ref<Connection | null>(null)
+
+// Loose connection mode + click-to-connect state
+const isConnecting = ref(false)
+const connectingSource = ref<string | null>(null)
+const isLegendOpen = ref(true)
+const connectionMode = ConnectionMode.Loose
+
+function handleConnectStart(params: { nodeId?: string }) {
+  isConnecting.value = true
+  connectingSource.value = params.nodeId ?? null
+}
+
+function handleConnectEnd() {
+  isConnecting.value = false
+  connectingSource.value = null
+}
 
 // Bandwidth presets
 const bandwidthPresets = [
@@ -252,13 +278,41 @@ function getEdgeColor(edge: TopologyEdge): string {
 }
 
 // Handle node click
-function onNodeClick(event: { node: Node }) {
+function onNodeClick(event: NodeMouseEvent) {
   selectedNode.value = event.node.data as TopologyNode
   isNodeDetailOpen.value = true
 }
 
+// Start connect flow from node detail modal
+function startConnectFromNode() {
+  if (!selectedNode.value)
+    return
+
+  const node = flowNodes.value.find(n => n.id === selectedNode.value?.id)
+  if (!node)
+    return
+
+  // Programmatically start a click-connect from this node's source handle
+  startConnection(
+    {
+      nodeId: node.id,
+      type: 'source',
+      id: null,
+      position: node.sourcePosition ?? Position.Right,
+      x: node.position.x,
+      y: node.position.y,
+    },
+    undefined,
+    true,
+  )
+  isConnecting.value = true
+  connectingSource.value = node.id
+  isNodeDetailOpen.value = false
+  toast.info(`Click a target router port to connect from ${selectedNode.value.name}`)
+}
+
 // Handle edge click
-function onEdgeClick(event: { edge: Edge }) {
+function onEdgeClick(event: EdgeMouseEvent) {
   selectedEdge.value = event.edge.data as TopologyEdge
   isEdgeDetailOpen.value = true
 }
@@ -268,6 +322,24 @@ function handleConnect(connection: Connection) {
   if (!connection.source || !connection.target) {
     return
   }
+
+  if (connection.source === connection.target) {
+    handleConnectEnd()
+    toast.error('Cannot connect a router to itself')
+    return
+  }
+
+  const exists = props.edges.some(
+    e => (e.source === connection.source && e.target === connection.target)
+      || (e.source === connection.target && e.target === connection.source),
+  )
+  if (exists) {
+    handleConnectEnd()
+    toast.error('Connection already exists between these routers')
+    return
+  }
+
+  handleConnectEnd()
 
   // Store pending connection
   pendingConnection.value = connection
@@ -358,22 +430,40 @@ async function handleDeleteEdge(edgeId: string) {
 
 // Delete node (not implemented - nodes are routers)
 // Routers should be deleted from the router page
+
+// Esc cancels an in-progress click-to-connect gesture
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && isConnecting.value) {
+    handleConnectEnd()
+    flowEdges.value = flowEdges.value.filter(edge => props.edges.some(p => p.id === edge.id))
+  }
+}
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
   <div class="w-full space-y-4">
     <!-- Vue Flow Container -->
-    <div class="w-full rounded-lg border bg-card overflow-hidden" style="height: 600px;">
+    <div
+      class="relative w-full rounded-lg border bg-card overflow-hidden"
+      style="height: max(60vh, 480px);"
+    >
       <VueFlow
         v-model:nodes="flowNodes"
         v-model:edges="flowEdges"
         :default-viewport="{ zoom: 1, x: 0, y: 0 }"
         :min-zoom="0.2"
         :max-zoom="2"
+        :connection-mode="connectionMode"
+        :connect-on-click="true"
+        :delete-key-code="null"
         fit-view-on-init
         @node-click="onNodeClick"
         @edge-click="onEdgeClick"
         @connect="handleConnect"
+        @connect-start="handleConnectStart"
+        @connect-end="handleConnectEnd"
       >
         <!-- Background -->
         <Background />
@@ -381,6 +471,95 @@ async function handleDeleteEdge(edgeId: string) {
         <!-- Controls -->
         <Controls />
       </VueFlow>
+
+      <!-- Connecting hint overlay -->
+      <div
+        v-if="isConnecting"
+        class="pointer-events-none absolute top-3 left-1/2 z-20 -translate-x-1/2 rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground shadow-lg"
+      >
+        Click a target router port to connect · Esc to cancel
+      </div>
+
+      <!-- Legend overlay -->
+      <div class="absolute bottom-3 right-3 z-20">
+        <div
+          v-if="isLegendOpen"
+          class="rounded-lg border bg-card/95 p-3 shadow-md backdrop-blur"
+        >
+          <div class="flex items-center justify-between gap-6 mb-2">
+            <p class="text-xs font-semibold">
+              Legend
+            </p>
+            <button
+              class="text-muted-foreground hover:text-foreground"
+              aria-label="Hide legend"
+              @click="isLegendOpen = false"
+            >
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-x-6 gap-y-1">
+            <div>
+              <p class="text-[10px] font-medium text-muted-foreground mb-1">
+                Router Types
+              </p>
+              <div class="space-y-0.5">
+                <div class="flex items-center gap-1.5">
+                  <div class="h-2 w-2 rounded bg-blue-600" />
+                  <span class="text-[10px]">Upstream</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <div class="h-2 w-2 rounded bg-green-600" />
+                  <span class="text-[10px]">Core</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <div class="h-2 w-2 rounded bg-purple-600" />
+                  <span class="text-[10px]">Distribution</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <div class="h-2 w-2 rounded bg-orange-600" />
+                  <span class="text-[10px]">Wireless</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p class="text-[10px] font-medium text-muted-foreground mb-1">
+                Connections
+              </p>
+              <div class="space-y-0.5">
+                <div class="flex items-center gap-1.5">
+                  <div class="h-0.5 w-5 bg-green-600" />
+                  <span class="text-[10px]">Ethernet</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <div class="h-0.5 w-5 bg-blue-600" />
+                  <span class="text-[10px]">Fiber</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <div class="h-0.5 w-5 bg-orange-600" />
+                  <span class="text-[10px]">Wireless</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <div class="h-0.5 w-5 bg-purple-600" />
+                  <span class="text-[10px]">VPN</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button
+          v-else
+          class="flex items-center gap-1.5 rounded-md border bg-card/95 px-2 py-1 text-xs text-muted-foreground shadow-md backdrop-blur hover:text-foreground"
+          @click="isLegendOpen = true"
+        >
+          <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+          Legend
+        </button>
+      </div>
     </div>
 
     <!-- Create Connection Dialog -->
@@ -667,7 +846,16 @@ async function handleDeleteEdge(edgeId: string) {
           </div>
         </div>
 
-        <div class="mt-6 flex justify-end">
+        <div class="mt-6 flex justify-between">
+          <button
+            class="inline-flex items-center gap-2 px-4 py-2 border border-input rounded-md hover:bg-accent hover:text-accent-foreground"
+            @click="startConnectFromNode"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11-9 11z" />
+            </svg>
+            Create Connection
+          </button>
           <button
             class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
             @click="isNodeDetailOpen = false"
@@ -686,64 +874,6 @@ async function handleDeleteEdge(edgeId: string) {
       @delete="handleDeleteEdge"
       @updated="emit('connectionCreated')"
     />
-
-    <!-- Legend -->
-    <div class="mt-4 rounded-lg border bg-card p-4">
-      <h4 class="text-sm font-semibold mb-3">
-        Legend
-      </h4>
-      <div class="grid gap-4 md:grid-cols-2">
-        <!-- Node Types -->
-        <div>
-          <p class="text-xs font-medium text-muted-foreground mb-2">
-            Router Types
-          </p>
-          <div class="space-y-1">
-            <div class="flex items-center gap-2">
-              <div class="h-3 w-3 rounded bg-blue-600" />
-              <span class="text-xs">Upstream</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="h-3 w-3 rounded bg-green-600" />
-              <span class="text-xs">Core</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="h-3 w-3 rounded bg-purple-600" />
-              <span class="text-xs">Distribution</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="h-3 w-3 rounded bg-orange-600" />
-              <span class="text-xs">Wireless</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Connection Types -->
-        <div>
-          <p class="text-xs font-medium text-muted-foreground mb-2">
-            Connection Types
-          </p>
-          <div class="space-y-1">
-            <div class="flex items-center gap-2">
-              <div class="h-0.5 w-8 bg-green-600" />
-              <span class="text-xs">Ethernet</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="h-0.5 w-8 bg-blue-600" />
-              <span class="text-xs">Fiber</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="h-0.5 w-8 bg-orange-600" />
-              <span class="text-xs">Wireless</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="h-0.5 w-8 bg-purple-600" />
-              <span class="text-xs">VPN</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -760,6 +890,30 @@ async function handleDeleteEdge(edgeId: string) {
 
 .custom-node:hover {
   filter: brightness(0.95);
+}
+
+/* Enlarge connection handle hit targets (default ~6px, below WCAG target size) */
+.vue-flow__handle {
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  transition: box-shadow 0.15s, background-color 0.15s;
+}
+
+/* Invisible hit zone ~3x visual size for easy grabbing */
+.vue-flow__handle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+}
+
+.vue-flow__handle:hover {
+  box-shadow: 0 0 0 4px rgb(59 130 246 / 0.3);
 }
 
 /* Dark mode adjustments */

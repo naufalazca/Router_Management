@@ -1,5 +1,36 @@
 import { defineStore } from 'pinia'
 
+export interface ApiFieldError {
+  field: string
+  message: string
+}
+
+/**
+ * Build a readable error message from an API error response.
+ * For Zod validation errors (400) the backend sends:
+ *   { status: 'error', message: 'Validation error', errors: [{ field, message }] }
+ * so we join the per-field details into the message.
+ */
+export function extractApiErrorMessage(error: any, fallback: string): string {
+  const data = error?.data ?? error?.response?._data
+
+  const fieldErrors: ApiFieldError[] | undefined = Array.isArray(data?.errors)
+    ? data.errors
+    : undefined
+
+  if (fieldErrors && fieldErrors.length > 0) {
+    const details = fieldErrors
+      .map((e) => {
+        const field = e.field?.replace(/^body\./, '') || 'field'
+        return `${field}: ${e.message}`
+      })
+      .join(', ')
+    return `Validation failed — ${details}`
+  }
+
+  return data?.message || error?.message || fallback
+}
+
 export type RouterStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE'
 export type RouterType = 'UPSTREAM' | 'CORE' | 'DISTRIBUSI' | 'WIRELESS'
 export type RouterBrand = 'MIKROTIK' | 'UBIVIQUITI'
@@ -183,10 +214,20 @@ export const useRouterStore = defineStore('router', {
       }
       catch (error: any) {
         console.error('Create router error:', error)
-        this.error = error?.data?.message || error?.message || 'Failed to create router'
+        // Note: do NOT set this.error here — the create modal shows the toast,
+        // and this.error drives the page-level "Error Loading Data" alert.
+        const message = extractApiErrorMessage(error, 'Failed to create router')
+
+        // Collect per-field errors from backend validation (Zod)
+        const rawErrors = error?.data?.errors ?? error?.response?._data?.errors
+        const fieldErrors: Record<string, string> | undefined = Array.isArray(rawErrors) && rawErrors.length > 0
+          ? Object.fromEntries(rawErrors.map((e: any) => [String(e.field ?? '').replace(/^body\./, ''), e.message]))
+          : undefined
+
         return {
           success: false,
-          error: this.error,
+          error: message,
+          fieldErrors,
         }
       }
       finally {
@@ -221,10 +262,10 @@ export const useRouterStore = defineStore('router', {
       }
       catch (error: any) {
         console.error('Update router error:', error)
-        this.error = error?.data?.message || error?.message || 'Failed to update router'
+        // Same as createRouter: the edit modal shows the toast itself.
         return {
           success: false,
-          error: this.error,
+          error: extractApiErrorMessage(error, 'Failed to update router'),
         }
       }
       finally {
@@ -255,10 +296,11 @@ export const useRouterStore = defineStore('router', {
       }
       catch (error: any) {
         console.error('Delete router error:', error)
-        this.error = error?.data?.message || error?.message || 'Failed to delete router'
+        // Do NOT set this.error — the delete dialog shows the toast itself,
+        // and this.error drives the page-level "Error Loading Data" alert.
         return {
           success: false,
-          error: this.error,
+          error: extractApiErrorMessage(error, 'Failed to delete router'),
         }
       }
       finally {
@@ -281,10 +323,10 @@ export const useRouterStore = defineStore('router', {
       }
       catch (error: any) {
         console.error('Test connection error:', error)
-        this.error = error?.data?.message || error?.message || 'Failed to test router connection'
+        // Do NOT set this.error — the page shows the toast itself.
         return {
           success: false,
-          error: this.error,
+          error: extractApiErrorMessage(error, 'Failed to test router connection'),
         }
       }
       finally {

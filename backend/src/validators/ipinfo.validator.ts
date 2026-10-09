@@ -9,5 +9,3 @@ export const ipParamSchema = z.object({
     'Invalid IP address format'
   )
 });
-
-export type IpParamInput = z.infer<typeof ipParamSchema>;

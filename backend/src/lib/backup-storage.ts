@@ -67,16 +67,6 @@ export async function uploadBackup(
 }
 
 /**
- * Download backup file from R2 storage
- *
- * @param storageKey - Storage key path
- * @returns Backup file content as Buffer
- */
-export async function downloadBackup(storageKey: string): Promise<Buffer> {
-  return await r2Client.download(storageKey);
-}
-
-/**
  * Download backup and verify checksum
  *
  * @param storageKey - Storage key path
@@ -110,15 +100,6 @@ export async function deleteBackup(storageKey: string): Promise<void> {
 }
 
 /**
- * Delete multiple backup files from R2 storage
- *
- * @param storageKeys - Array of storage key paths
- */
-export async function deleteBackups(storageKeys: string[]): Promise<void> {
-  await r2Client.deleteMany(storageKeys);
-}
-
-/**
  * Generate presigned URL for backup download
  * Used to provide temporary download links to users
  *
@@ -131,62 +112,6 @@ export async function generateBackupDownloadUrl(
   expiresIn: number = 3600
 ): Promise<string> {
   return await r2Client.getPresignedUrl(storageKey, expiresIn);
-}
-
-/**
- * Check if backup file exists in R2 storage
- *
- * @param storageKey - Storage key path
- * @returns true if exists, false otherwise
- */
-export async function backupExists(storageKey: string): Promise<boolean> {
-  return await r2Client.exists(storageKey);
-}
-
-/**
- * Get backup file metadata from R2
- *
- * @param storageKey - Storage key path
- * @returns File metadata
- */
-export async function getBackupMetadata(storageKey: string): Promise<{
-  size: number;
-  etag: string;
-  lastModified: Date;
-  contentType: string;
-}> {
-  return await r2Client.getMetadata(storageKey);
-}
-
-/**
- * List all backups for a specific router
- *
- * @param routerId - Router UUID
- * @returns Array of storage keys
- */
-export async function listRouterBackups(routerId: string): Promise<string[]> {
-  const prefix = `backups/${routerId}/`;
-  return await r2Client.listObjects(prefix);
-}
-
-/**
- * Get storage statistics for a router's backups
- *
- * @param routerId - Router UUID
- * @returns Total size and file count
- */
-export async function getRouterBackupStats(routerId: string): Promise<{
-  totalSize: number;
-  fileCount: number;
-  totalSizeMB: number;
-}> {
-  const prefix = `backups/${routerId}/`;
-  const stats = await r2Client.getStorageStats(prefix);
-
-  return {
-    ...stats,
-    totalSizeMB: Math.round((stats.totalSize / 1024 / 1024) * 100) / 100
-  };
 }
 
 /**

@@ -4,9 +4,16 @@ export const routerIdParamSchema = z.object({
   routerId: z.string().uuid('Invalid router ID'),
 });
 
+const ipv4Regex = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
+const hostnameRegex = /^(?=.{1,253}$)[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+export const hostSchema = z.string().trim().refine(
+  v => ipv4Regex.test(v) || hostnameRegex.test(v),
+  'Must be a valid IPv4 address or domain (e.g. aaa.sabawave.net)'
+);
+
 export const createRouterSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  ipAddress: z.string().ip('Invalid IP address'),
+  ipAddress: hostSchema,
   macAddress: z.string().optional(),
   model: z.string().optional(),
   location: z.string().optional(),
@@ -22,7 +29,7 @@ export const createRouterSchema = z.object({
 
 export const updateRouterSchema = z.object({
   name: z.string().min(1).optional(),
-  ipAddress: z.string().ip('Invalid IP address').optional(),
+  ipAddress: hostSchema.optional(),
   macAddress: z.string().optional(),
   model: z.string().optional(),
   location: z.string().optional(),
@@ -36,6 +43,3 @@ export const updateRouterSchema = z.object({
   apiPort: z.coerce.number().int().positive().optional(),
   sshPort: z.coerce.number().int().positive().optional()
 });
-
-export type CreateRouterInput = z.infer<typeof createRouterSchema>;
-export type UpdateRouterInput = z.infer<typeof updateRouterSchema>;

@@ -19,6 +19,3 @@ export const updateCompanySchema = z.object({
   masterUsername: z.string().min(1).optional(),
   masterPassword: z.string().min(1).optional()
 });
-
-export type CreateCompanyInput = z.infer<typeof createCompanySchema>;
-export type UpdateCompanyInput = z.infer<typeof updateCompanySchema>;

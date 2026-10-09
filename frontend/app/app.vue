@@ -61,7 +61,11 @@ const dir = computed(() => textDirection.value === 'rtl' ? 'rtl' : 'ltr')
         </NuxtLayout>
       </div>
 
-      <Toaster :theme="colorMode.preference as any || 'system'" />
+      <Toaster
+        :theme="colorMode.preference as any || 'system'"
+        :visible-toasts="3"
+        :expand="false"
+      />
     </ConfigProvider>
 
     <Analytics />

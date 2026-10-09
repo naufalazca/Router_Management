@@ -6,7 +6,6 @@
  * Default RouterOS API Port
  */
 export const ROUTEROS_DEFAULT_PORT = 8728;
-export const ROUTEROS_SSL_PORT = 8729;
 
 /**
  * Connection Timeout (milliseconds)
@@ -23,74 +22,6 @@ export const USER_COMMANDS = {
   REMOVE: '/user/remove',
   ENABLE: '/user/enable',
   DISABLE: '/user/disable',
-} as const;
-
-/**
- * System Backup Commands
- */
-export const BACKUP_COMMANDS = {
-  PRINT: '/system/backup/print',
-  SAVE: '/system/backup/save',
-  REMOVE: '/system/backup/remove',
-} as const;
-
-/**
- * File Commands
- */
-export const FILE_COMMANDS = {
-  PRINT: '/file/print',
-  REMOVE: '/file/remove',
-  GET_CONTENTS: '/file/get-contents',
-} as const;
-
-/**
- * System Info Commands
- */
-export const SYSTEM_COMMANDS = {
-  RESOURCE: '/system/resource/print',
-  IDENTITY: '/system/identity/print',
-  CLOCK: '/system/clock/print',
-  ROUTERBOARD: '/system/routerboard/print',
-} as const;
-
-/**
- * Interface Commands
- */
-export const INTERFACE_COMMANDS = {
-  PRINT: '/interface/print',
-  ENABLE: '/interface/enable',
-  DISABLE: '/interface/disable',
-  MONITOR: '/interface/monitor-traffic',
-} as const;
-
-/**
- * BGP Routing Commands (RouterOS v7)
- */
-export const BGP_COMMANDS = {
-  CONNECTION: {
-    PRINT: '/routing/bgp/connection/print',
-    ENABLE: '/routing/bgp/connection/enable',
-    DISABLE: '/routing/bgp/connection/disable',
-    RESET: '/routing/bgp/connection/reset',
-    SET: '/routing/bgp/connection/set',
-    ADD: '/routing/bgp/connection/add',
-    REMOVE: '/routing/bgp/connection/remove',
-  },
-  ADVERTISEMENTS: {
-    PRINT: '/routing/bgp/advertisements/print',
-  },
-  SESSION: {
-    PRINT: '/routing/bgp/session/print',
-  },
-} as const;
-
-/**
- * Default User Groups in RouterOS
- */
-export const USER_GROUPS = {
-  FULL: 'full',
-  READ: 'read',
-  WRITE: 'write',
 } as const;
 
 /**

@@ -23,6 +23,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { useCompanyStore } from '~/stores/company'
 import { useRouterStore } from '~/stores/router'
+import { type RouterFormErrors, validateField, validateRouterForm } from '~/composables/validator/router/useRouterValidation'
 
 const props = defineProps<{
   open: boolean
@@ -37,6 +38,29 @@ const emit = defineEmits<{
 const routerStore = useRouterStore()
 const companyStore = useCompanyStore()
 const isSubmitting = ref(false)
+const errors = ref<RouterFormErrors>({})
+
+const touched = ref<Record<string, boolean>>({})
+
+function touch(field: string) {
+  touched.value[field] = true
+  errors.value = validateRouterForm(formData.value)
+}
+
+// Re-validate a field as the user types (after it has been touched once)
+function revalidate(field: keyof RouterFormErrors) {
+  if (touched.value[field]) {
+    const error = validateField(field, formData.value)
+    if (error)
+      errors.value[field] = error
+    else
+      delete errors.value[field]
+  }
+}
+
+function showFieldError(field: keyof RouterFormErrors) {
+  return touched.value[field] ? errors.value[field] : undefined
+}
 
 const formData = ref<UpdateRouterInput>({
   name: '',
@@ -110,9 +134,12 @@ watch(() => props.router, (newRouter) => {
 }, { immediate: true })
 
 async function handleSubmit() {
-  // Validation
-  if (!formData.value.name || !formData.value.ipAddress) {
-    toast.error('Please fill in all required fields')
+  errors.value = validateRouterForm(formData.value)
+  touched.value = Object.fromEntries(Object.keys(formData.value).map(k => [k, true]))
+
+  if (Object.keys(errors.value).length > 0) {
+    const firstError = Object.values(errors.value)[0]
+    toast.error(firstError || 'Please fix the highlighted fields before submitting')
     return
   }
 
@@ -150,7 +177,7 @@ async function handleSubmit() {
         </DialogDescription>
       </DialogHeader>
 
-      <form class="space-y-6 mt-2" @submit.prevent="handleSubmit">
+      <form class="space-y-6 mt-2" novalidate @submit.prevent="handleSubmit">
         <!-- Identity -->
         <div class="space-y-3">
           <div class="flex items-center gap-2 text-xs font-medium text-muted-foreground font-mono uppercase tracking-wider">
@@ -165,7 +192,13 @@ async function handleSubmit() {
                 placeholder="Router-01"
                 required
                 class="font-mono"
+                :class="{ 'border-destructive': showFieldError('name') }"
+                @blur="touch('name')"
+                @input="revalidate('name')"
               />
+              <p v-if="showFieldError('name')" class="text-xs text-destructive">
+                {{ showFieldError('name') }}
+              </p>
             </div>
             <div class="space-y-1.5">
               <Label class="text-sm">Model</Label>
@@ -196,13 +229,19 @@ async function handleSubmit() {
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="space-y-1.5">
-              <Label class="text-sm">IP Address <span class="text-destructive">*</span></Label>
+              <Label class="text-sm">IP Address / Hostname <span class="text-destructive">*</span></Label>
               <Input
                 v-model="formData.ipAddress"
-                placeholder="192.168.1.1"
+                placeholder="192.168.1.1 or aaa.sabawave.net"
                 required
                 class="font-mono"
+                :class="{ 'border-destructive': showFieldError('ipAddress') }"
+                @blur="touch('ipAddress')"
+                @input="revalidate('ipAddress')"
               />
+              <p v-if="showFieldError('ipAddress')" class="text-xs text-destructive">
+                {{ showFieldError('ipAddress') }}
+              </p>
             </div>
             <div class="space-y-1.5">
               <Label class="text-sm">MAC Address</Label>
@@ -210,7 +249,13 @@ async function handleSubmit() {
                 v-model="formData.macAddress"
                 placeholder="00:00:00:00:00:00"
                 class="font-mono"
+                :class="{ 'border-destructive': showFieldError('macAddress') }"
+                @blur="touch('macAddress')"
+                @input="revalidate('macAddress')"
               />
+              <p v-if="showFieldError('macAddress')" class="text-xs text-destructive">
+                {{ showFieldError('macAddress') }}
+              </p>
             </div>
           </div>
         </div>
@@ -331,7 +376,13 @@ async function handleSubmit() {
                 type="number"
                 placeholder="8728"
                 class="font-mono"
+                :class="{ 'border-destructive': showFieldError('apiPort') }"
+                @blur="touch('apiPort')"
+                @input="revalidate('apiPort')"
               />
+              <p v-if="showFieldError('apiPort')" class="text-xs text-destructive">
+                {{ showFieldError('apiPort') }}
+              </p>
             </div>
             <div class="space-y-1.5">
               <Label class="text-sm">SSH Port</Label>
@@ -340,7 +391,13 @@ async function handleSubmit() {
                 type="number"
                 placeholder="22"
                 class="font-mono"
+                :class="{ 'border-destructive': showFieldError('sshPort') }"
+                @blur="touch('sshPort')"
+                @input="revalidate('sshPort')"
               />
+              <p v-if="showFieldError('sshPort')" class="text-xs text-destructive">
+                {{ showFieldError('sshPort') }}
+              </p>
             </div>
           </div>
         </div>

@@ -69,6 +69,76 @@ interface TopologyData {
 
 export class RouterConnectionService {
   /**
+   * Map a switch row to a topology node (shared by company and global views)
+   */
+  private mapSwitchNode(s: {
+    id: string;
+    name: string;
+    ipAddress: string;
+    location?: string | null;
+    status: string;
+    brand?: string | null;
+    portCount?: number | null;
+    companyId?: string | null;
+    company?: { name: string } | null;
+  }): TopologyNode {
+    return {
+      id: s.id,
+      name: s.name,
+      ipAddress: s.ipAddress,
+      location: s.location || undefined,
+      nodeType: 'SWITCH' as const,
+      status: s.status,
+      brand: s.brand || undefined,
+      portCount: s.portCount || undefined,
+      companyId: s.companyId || undefined,
+      companyName: s.company?.name
+    };
+  }
+
+  /**
+   * Map a switch connection row to a topology edge (shared by company and global views)
+   */
+  private mapSwitchEdge(conn: {
+    id: string;
+    sourceSwitchId?: string | null;
+    sourceRouterId?: string | null;
+    targetSwitchId?: string | null;
+    targetRouterId?: string | null;
+    linkType: string;
+    linkStatus: string;
+    sourceInterface?: string | null;
+    targetInterface?: string | null;
+    bandwidth?: string | null;
+    distance?: any;
+    isAutoDiscovered: boolean;
+    sourcePortNumber?: number | null;
+    targetPortNumber?: number | null;
+    vlan?: number | null;
+    speed?: string | null;
+    notes?: string | null;
+  }): TopologyEdge {
+    return {
+      id: conn.id,
+      source: (conn.sourceSwitchId || conn.sourceRouterId)!,
+      target: (conn.targetSwitchId || conn.targetRouterId)!,
+      linkType: conn.linkType,
+      linkStatus: conn.linkStatus,
+      sourceInterface: conn.sourceInterface || undefined,
+      targetInterface: conn.targetInterface || undefined,
+      bandwidth: conn.bandwidth || undefined,
+      distance: conn.distance ? Number(conn.distance) : undefined,
+      isAutoDiscovered: conn.isAutoDiscovered,
+      edgeType: 'SWITCH' as const,
+      sourcePortNumber: conn.sourcePortNumber || undefined,
+      targetPortNumber: conn.targetPortNumber || undefined,
+      vlan: conn.vlan || undefined,
+      speed: conn.speed || undefined,
+      notes: conn.notes || undefined
+    };
+  }
+
+  /**
    * Get all topology data (nodes and edges)
    */
   async getTopology(companyId?: string): Promise<TopologyData> {
@@ -157,13 +227,26 @@ export class RouterConnectionService {
 
     if (companyId) {
       // Company-owned device IDs (routers + switches)
-      const companySwitches = await prisma.switch.findMany({
-        where: { companyId },
-        select: { id: true }
-      });
+      // Only switches that were manually added to the topology (have a layout
+      // record for this company) appear as nodes.
+      const [companySwitches, companySwitchLayouts] = await Promise.all([
+        prisma.switch.findMany({
+          where: { companyId },
+          select: { id: true }
+        }),
+        prisma.switchTopologyLayout.findMany({
+          where: { companyId },
+          select: { switchId: true }
+        })
+      ]);
+      const addedSwitchIds = new Set(companySwitchLayouts.map(l => l.switchId));
+      const visibleCompanySwitchIds = companySwitches
+        .map(s => s.id)
+        .filter(id => addedSwitchIds.has(id));
+
       const deviceIds = new Set<string>([
         ...routers.map(r => r.id),
-        ...companySwitches.map(s => s.id)
+        ...visibleCompanySwitchIds
       ]);
 
       const switchConnections = await prisma.switchConnection.findMany({
@@ -214,7 +297,7 @@ export class RouterConnectionService {
       }
 
       const visibleSwitchIds = new Set<string>([
-        ...companySwitches.map(s => s.id),
+        ...visibleCompanySwitchIds,
         ...foreignSwitchIds
       ]);
 
@@ -227,18 +310,7 @@ export class RouterConnectionService {
           orderBy: { name: 'asc' }
         });
 
-        switchNodes = switches.map(s => ({
-          id: s.id,
-          name: s.name,
-          ipAddress: s.ipAddress,
-          location: s.location || undefined,
-          nodeType: 'SWITCH' as const,
-          status: s.status,
-          brand: s.brand,
-          portCount: s.portCount || undefined,
-          companyId: s.companyId,
-          companyName: s.company?.name
-        }));
+        switchNodes = switches.map(s => this.mapSwitchNode(s));
       }
 
       // Foreign router endpoints must also be present as nodes so their edges resolve.
@@ -263,27 +335,17 @@ export class RouterConnectionService {
         switchNodes = [...switchNodes, ...foreignRouterNodes];
       }
 
-      switchEdges = visibleSwitchConnections.map(conn => ({
-          id: conn.id,
-          source: (conn.sourceSwitchId || conn.sourceRouterId)!,
-          target: (conn.targetSwitchId || conn.targetRouterId)!,
-          linkType: conn.linkType,
-          linkStatus: conn.linkStatus,
-          sourceInterface: conn.sourceInterface || undefined,
-          targetInterface: conn.targetInterface || undefined,
-          bandwidth: conn.bandwidth || undefined,
-          distance: conn.distance ? Number(conn.distance) : undefined,
-          isAutoDiscovered: conn.isAutoDiscovered,
-          edgeType: 'SWITCH' as const,
-          sourcePortNumber: conn.sourcePortNumber || undefined,
-          targetPortNumber: conn.targetPortNumber || undefined,
-          vlan: conn.vlan || undefined,
-          speed: conn.speed || undefined,
-          notes: conn.notes || undefined
-        }));
+      switchEdges = visibleSwitchConnections.map(conn => this.mapSwitchEdge(conn));
     } else {
-      // Global view (no company filter): all switches + all switch connections
+      // Global view (no company filter): only switches that were manually
+      // added to the topology (have a layout record) + all switch connections
+      const addedLayouts = await prisma.switchTopologyLayout.findMany({
+        select: { switchId: true }
+      });
+      const addedSwitchIdList = addedLayouts.map(l => l.switchId);
+
       const switches = await prisma.switch.findMany({
+        where: { id: { in: addedSwitchIdList } },
         include: { company: { select: { id: true, name: true, code: true } } },
         orderBy: { name: 'asc' }
       });
@@ -298,37 +360,19 @@ export class RouterConnectionService {
         orderBy: { createdAt: 'desc' }
       });
 
-      switchNodes = switches.map(s => ({
-        id: s.id,
-        name: s.name,
-        ipAddress: s.ipAddress,
-        location: s.location || undefined,
-        nodeType: 'SWITCH' as const,
-        status: s.status,
-        brand: s.brand,
-        portCount: s.portCount || undefined,
-        companyId: s.companyId,
-        companyName: s.company?.name
-      }));
+      // Only keep connections whose switch endpoints were manually added to the
+      // topology (have a layout record); otherwise edges would reference nodes
+      // that are not rendered. Router endpoints are always rendered as nodes.
+      const addedSwitchIdSet = new Set(addedSwitchIdList);
+      const visibleConnections = switchConnections.filter((conn) => {
+        if (conn.sourceSwitchId && !addedSwitchIdSet.has(conn.sourceSwitchId)) return false;
+        if (conn.targetSwitchId && !addedSwitchIdSet.has(conn.targetSwitchId)) return false;
+        return true;
+      });
 
-      switchEdges = switchConnections.map(conn => ({
-        id: conn.id,
-        source: (conn.sourceSwitchId || conn.sourceRouterId)!,
-        target: (conn.targetSwitchId || conn.targetRouterId)!,
-        linkType: conn.linkType,
-        linkStatus: conn.linkStatus,
-        sourceInterface: conn.sourceInterface || undefined,
-        targetInterface: conn.targetInterface || undefined,
-        bandwidth: conn.bandwidth || undefined,
-        distance: conn.distance ? Number(conn.distance) : undefined,
-        isAutoDiscovered: conn.isAutoDiscovered,
-        edgeType: 'SWITCH' as const,
-        sourcePortNumber: conn.sourcePortNumber || undefined,
-        targetPortNumber: conn.targetPortNumber || undefined,
-        vlan: conn.vlan || undefined,
-        speed: conn.speed || undefined,
-        notes: conn.notes || undefined
-      }));
+      switchNodes = switches.map(s => this.mapSwitchNode(s));
+
+      switchEdges = visibleConnections.map(conn => this.mapSwitchEdge(conn));
     }
 
     const nodes: TopologyNode[] = [...routerNodes, ...switchNodes];

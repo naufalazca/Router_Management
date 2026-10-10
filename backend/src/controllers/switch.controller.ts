@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { SwitchService } from '../services/switch/switch.service';
-import { createSwitchSchema, updateSwitchSchema } from '../validators/switch/switch.validator';
+import { createSwitchSchema, updateSwitchSchema, switchIdParamSchema } from '../validators/switch/switch.validator';
 import { ZodError } from 'zod';
 
 export class SwitchController {
@@ -24,7 +24,7 @@ export class SwitchController {
 
   getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { id } = req.params;
+      const { id } = switchIdParamSchema.parse(req.params);
       const sw = await this.switchService.getSwitchById(id);
 
       if (!sw) {
@@ -79,7 +79,7 @@ export class SwitchController {
 
   update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { id } = req.params;
+      const { id } = switchIdParamSchema.parse(req.params);
       const validatedData = updateSwitchSchema.parse(req.body);
 
       const existing = await this.switchService.getSwitchById(id);
@@ -123,7 +123,7 @@ export class SwitchController {
 
   delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { id } = req.params;
+      const { id } = switchIdParamSchema.parse(req.params);
 
       const existing = await this.switchService.getSwitchById(id);
       if (!existing) {

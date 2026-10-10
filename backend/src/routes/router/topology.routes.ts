@@ -51,7 +51,7 @@ router.get('/switch-connections', switchConnectionController.getAll);
 router.get('/switch-connections/:id', switchConnectionController.getById);
 
 // POST /api/router/topology/switch-connections - Create switch connection
-router.post('/switch-connections', switchConnectionController.create);
+router.post('/switch-connections', authenticate, requireAdmin, switchConnectionController.create);
 
 // PUT /api/router/topology/switch-connections/:id - Update switch connection
 router.put('/switch-connections/:id', authenticate, requireAdmin, switchConnectionController.update);
@@ -67,20 +67,29 @@ router.delete('/switch-connections/:id', authenticate, requireAdmin, switchConne
 // GET /api/router/topology/switch-layout - Get all switch node positions for a company
 router.get('/switch-layout', switchLayoutController.getLayout);
 
+// GET /api/router/topology/switch-layout/available - Get switches not yet added to topology
+router.get('/switch-layout/available', switchLayoutController.getAvailableSwitches);
+
+// POST /api/router/topology/switch-layout/add - Manually add a switch to topology
+router.post('/switch-layout/add', authenticate, requireAdmin, switchLayoutController.addSwitch);
+
+// POST /api/router/topology/switch-layout/remove - Manually remove a switch from topology
+router.post('/switch-layout/remove', authenticate, requireAdmin, switchLayoutController.removeSwitch);
+
 // GET /api/router/topology/switch-layout/:switchId - Get position for a specific switch
 router.get('/switch-layout/:switchId', switchLayoutController.getSwitchPosition);
 
 // POST /api/router/topology/switch-layout - Upsert a single switch node position
-router.post('/switch-layout', switchLayoutController.upsertPosition);
+router.post('/switch-layout', authenticate, requireAdmin, switchLayoutController.upsertPosition);
 
 // POST /api/router/topology/switch-layout/bulk - Bulk upsert switch node positions
-router.post('/switch-layout/bulk', switchLayoutController.bulkUpsertPositions);
+router.post('/switch-layout/bulk', authenticate, requireAdmin, switchLayoutController.bulkUpsertPositions);
 
 // DELETE /api/router/topology/switch-layout/:switchId - Delete switch node position
-router.delete('/switch-layout/:switchId', switchLayoutController.deletePosition);
+router.delete('/switch-layout/:switchId', authenticate, requireAdmin, switchLayoutController.deletePosition);
 
 // DELETE /api/router/topology/switch-layout/company/:companyId - Reset all switch positions for a company
-router.delete('/switch-layout/company/:companyId', switchLayoutController.resetCompanyLayout);
+router.delete('/switch-layout/company/:companyId', authenticate, requireAdmin, switchLayoutController.resetCompanyLayout);
 
 // ==========================================
 // TOPOLOGY LAYOUT ROUTES

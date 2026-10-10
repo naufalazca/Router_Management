@@ -340,7 +340,7 @@ export const useTopologyStore = defineStore('topology', () => {
     bandwidth?: string
     distance?: number
     notes?: string
-  }) {
+  }, companyId?: string) {
     isLoading.value = true
     error.value = null
 
@@ -355,8 +355,8 @@ export const useTopologyStore = defineStore('topology', () => {
       })
 
       if (response && response.status === 'success') {
-        await fetchTopology()
-        await fetchConnections()
+        await fetchTopology(companyId)
+        await fetchConnections(companyId)
         return { success: true, data: response.data }
       }
       else {
@@ -389,6 +389,7 @@ export const useTopologyStore = defineStore('topology', () => {
       distance: number
       notes: string
     }>,
+    companyId?: string,
   ) {
     isLoading.value = true
     error.value = null
@@ -404,8 +405,8 @@ export const useTopologyStore = defineStore('topology', () => {
       })
 
       if (response && response.status === 'success') {
-        await fetchTopology()
-        await fetchConnections()
+        await fetchTopology(companyId)
+        await fetchConnections(companyId)
         return { success: true, data: response.data }
       }
       else {
@@ -423,7 +424,7 @@ export const useTopologyStore = defineStore('topology', () => {
   }
 
   // Delete switch connection
-  async function deleteSwitchConnection(id: string) {
+  async function deleteSwitchConnection(id: string, companyId?: string) {
     isLoading.value = true
     error.value = null
 
@@ -436,8 +437,8 @@ export const useTopologyStore = defineStore('topology', () => {
       })
 
       if (response && response.status === 'success') {
-        await fetchTopology()
-        await fetchConnections()
+        await fetchTopology(companyId)
+        await fetchConnections(companyId)
         return { success: true }
       }
       else {

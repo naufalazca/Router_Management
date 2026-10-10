@@ -48,6 +48,92 @@ export class TopologyLayoutController {
   };
 
   /**
+   * GET /api/router/topology/layout/available
+   * Get routers not yet added to the topology
+   */
+  getAvailableRouters = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { companyId } = req.query;
+
+      if (!companyId || typeof companyId !== 'string') {
+        res.status(400).json({
+          status: 'error',
+          message: 'companyId query parameter is required'
+        });
+        return;
+      }
+
+      const routers = await this.layoutService.getAvailableRouters(companyId);
+
+      res.json({
+        status: 'success',
+        data: routers
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * POST /api/router/topology/layout/add
+   * Manually add a router to the company topology
+   */
+  addRouter = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { routerId, companyId, positionX, positionY } = z.object({
+        routerId: z.string().uuid('Invalid router ID'),
+        companyId: z.string().uuid('Invalid company ID'),
+        positionX: z.number().min(-10000).max(10000).optional(),
+        positionY: z.number().min(-10000).max(10000).optional()
+      }).parse(req.body);
+
+      const result = await this.layoutService.addRouterToTopology(
+        routerId,
+        companyId,
+        positionX,
+        positionY
+      ).catch((error: any) => {
+        // Concurrent duplicate-add: unique constraint violation → conflict
+        if (error?.code === 'P2002') {
+          throw new Error('Router is already in the topology');
+        }
+        throw error;
+      });
+
+      res.status(201).json({
+        status: 'success',
+        message: 'Router added to topology',
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * POST /api/router/topology/layout/remove
+   * Manually remove a router from the company topology
+   */
+  removeRouter = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { routerId, companyId } = z.object({
+        routerId: z.string().uuid('Invalid router ID'),
+        companyId: z.string().uuid('Invalid company ID')
+      }).parse(req.body);
+
+      const result = await this.layoutService.removeRouterFromTopology(routerId, companyId);
+
+      res.json({
+        status: 'success',
+        message: 'Router removed from topology',
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
    * GET /api/router/topology/layout/:routerId
    * Get position for a specific router
    */

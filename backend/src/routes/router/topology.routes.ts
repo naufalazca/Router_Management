@@ -98,6 +98,20 @@ router.delete('/switch-layout/company/:companyId', authenticate, requireAdmin, s
 // GET /api/router/topology/layout - Get all node positions for a company
 router.get('/layout', layoutController.getLayout);
 
+// ==========================================
+// ROUTER TOPOLOGY ADD/REMOVE
+// (declared before param routes to avoid capture)
+// ==========================================
+
+// GET /api/router/topology/layout/available - Get routers not yet added to topology
+router.get('/layout/available', layoutController.getAvailableRouters);
+
+// POST /api/router/topology/layout/add - Manually add a router to topology
+router.post('/layout/add', authenticate, requireAdmin, layoutController.addRouter);
+
+// POST /api/router/topology/layout/remove - Manually remove a router from topology
+router.post('/layout/remove', authenticate, requireAdmin, layoutController.removeRouter);
+
 // GET /api/router/topology/layout/:routerId - Get position for a specific router
 router.get('/layout/:routerId', layoutController.getRouterPosition);
 

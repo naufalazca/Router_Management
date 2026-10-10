@@ -128,6 +128,106 @@ async function handleRemoveSwitchFromTopology() {
   }
 }
 
+// ==========================================
+// Manual router management (add/remove)
+// ==========================================
+interface AvailableRouter {
+  id: string
+  name: string
+  ipAddress: string
+  status: string
+  routerType?: string
+  routerBrand?: string
+  company?: { id: string, name: string, code: string }
+}
+
+const isAddRouterOpen = ref(false)
+const availableRouters = ref<AvailableRouter[]>([])
+const isLoadingAvailableRouters = ref(false)
+const isAddingRouter = ref(false)
+const isRemovingRouter = ref(false)
+
+function routerOwnerLabel(r: AvailableRouter): string | null {
+  if (!r.company || !props.companyId || r.company.id === props.companyId)
+    return null
+  return r.company.name
+}
+
+async function loadAvailableRouters() {
+  if (!props.companyId)
+    return
+  isLoadingAvailableRouters.value = true
+  try {
+    const response = await $apiFetch<{ status: string, data: AvailableRouter[] }>(
+      `/router/topology/layout/available?companyId=${props.companyId}`,
+    )
+    availableRouters.value = response.data || []
+  }
+  catch (err: any) {
+    toast.error(err?.data?.message || 'Failed to load available routers')
+    availableRouters.value = []
+  }
+  finally {
+    isLoadingAvailableRouters.value = false
+  }
+}
+
+function openAddRouterModal() {
+  isAddRouterOpen.value = true
+  loadAvailableRouters()
+}
+
+async function handleAddRouter(r: AvailableRouter) {
+  if (!props.companyId)
+    return
+  isAddingRouter.value = true
+  try {
+    await $apiFetch('/router/topology/layout/add', {
+      method: 'POST',
+      body: {
+        routerId: r.id,
+        companyId: props.companyId,
+      },
+    })
+    toast.success(`Router "${r.name}" added to topology`)
+    isAddRouterOpen.value = false
+    emit('connectionCreated') // triggers parent refresh
+  }
+  catch (err: any) {
+    toast.error(err?.data?.message || 'Failed to add router to topology')
+  }
+  finally {
+    isAddingRouter.value = false
+  }
+}
+
+async function handleRemoveRouterFromTopology() {
+  if (!props.companyId || !selectedNode.value || selectedNode.value.nodeType !== 'ROUTER')
+    return
+  const node = selectedNode.value
+  if (!confirm(`Remove router "${node.name}" from the topology? Its router connections will also be removed.`))
+    return
+  isRemovingRouter.value = true
+  try {
+    await $apiFetch('/router/topology/layout/remove', {
+      method: 'POST',
+      body: {
+        routerId: node.id,
+        companyId: props.companyId,
+      },
+    })
+    toast.success(`Router "${node.name}" removed from topology`)
+    isNodeDetailOpen.value = false
+    emit('connectionCreated') // triggers parent refresh
+  }
+  catch (err: any) {
+    toast.error(err?.data?.message || 'Failed to remove router from topology')
+  }
+  finally {
+    isRemovingRouter.value = false
+  }
+}
+
 // VueFlow instance for getting node positions
 const { onNodeDragStop, onPaneReady, startConnection } = useVueFlow()
 
@@ -669,8 +769,18 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         <Controls />
       </VueFlow>
 
-      <!-- Add Switch button overlay -->
-      <div class="absolute top-3 right-3 z-20">
+      <!-- Add Switch / Add Router buttons overlay -->
+      <div class="absolute top-3 right-3 z-20 flex items-center gap-2">
+        <button
+          class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+          :disabled="!companyId"
+          @click="openAddRouterModal"
+        >
+          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Add Router
+        </button>
         <button
           class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
           :disabled="!companyId"
@@ -1154,6 +1264,24 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
               Remove from Topology
             </button>
             <button
+              v-else-if="selectedNode.nodeType === 'ROUTER'"
+              class="inline-flex items-center gap-2 px-4 py-2 border border-destructive/50 text-destructive rounded-md hover:bg-destructive/10 disabled:opacity-50"
+              :disabled="isRemovingRouter"
+              @click="handleRemoveRouterFromTopology"
+            >
+              <svg
+                v-if="isRemovingRouter"
+                class="h-4 w-4 animate-spin"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Remove from Topology
+            </button>
+            <button
               class="inline-flex items-center gap-2 px-4 py-2 border border-input rounded-md hover:bg-accent hover:text-accent-foreground"
               @click="startConnectFromNode"
             >
@@ -1253,6 +1381,81 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           class="text-center text-muted-foreground py-8"
         >
           <p>No switches available to add. Either every switch is already in your topology, or no switches exist yet.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Router Modal -->
+    <div
+      v-if="isAddRouterOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      @click.self="isAddRouterOpen = false"
+    >
+      <div class="bg-card rounded-lg shadow-lg max-w-md w-full mx-4 p-6 max-h-[80vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold">
+            Add Router to Topology
+          </h3>
+          <button
+            class="text-muted-foreground hover:text-foreground"
+            @click="isAddRouterOpen = false"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <p class="text-sm text-muted-foreground mb-4">
+          Select a router to add to the topology. Routers are not added automatically.
+        </p>
+
+        <!-- Loading -->
+        <div
+          v-if="isLoadingAvailableRouters"
+          class="flex items-center justify-center py-8"
+        >
+          <svg class="h-8 w-8 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        </div>
+
+        <!-- Available Routers -->
+        <div
+          v-else-if="availableRouters.length > 0"
+          class="space-y-2"
+        >
+          <button
+            v-for="r in availableRouters"
+            :key="r.id"
+            class="w-full flex items-center justify-between rounded-lg border border-border p-3 text-left transition-colors hover:border-primary hover:bg-accent/50 disabled:opacity-50"
+            :disabled="isAddingRouter"
+            @click="handleAddRouter(r)"
+          >
+            <div>
+              <p class="font-medium">
+                {{ r.name }}
+              </p>
+              <p class="text-xs text-muted-foreground">
+                {{ r.ipAddress }}<template v-if="r.routerBrand">
+                  · {{ r.routerBrand }}
+                </template><template v-if="routerOwnerLabel(r)">
+                  · {{ routerOwnerLabel(r) }}
+                </template>
+              </p>
+            </div>
+            <svg class="h-5 w-5 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Empty -->
+        <div
+          v-else
+          class="text-center text-muted-foreground py-8"
+        >
+          <p>No routers available to add. Either every router is already in your topology, or no routers exist yet.</p>
         </div>
       </div>
     </div>

@@ -464,6 +464,74 @@ export const useTopologyStore = defineStore('topology', () => {
   // TOPOLOGY LAYOUT FUNCTIONS
   // ==========================================
 
+  // Add a router to the company topology (manual add) — refreshes topology after
+  async function addRouterToTopology(routerId: string, companyId: string, positionX?: number, positionY?: number) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const response = await $apiFetch<{
+        status: string
+        message: string
+        data: unknown
+      }>(`/router/topology/layout/add`, {
+        method: 'POST',
+        body: { routerId, companyId, positionX, positionY },
+      })
+
+      if (response && response.status === 'success') {
+        await fetchTopology(companyId)
+        await fetchConnections(companyId)
+        return { success: true, data: response.data }
+      }
+      else {
+        throw new Error(response?.message || 'Failed to add router to topology')
+      }
+    }
+    catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to add router to topology'
+      error.value = errorMsg
+      return { success: false, error: errorMsg }
+    }
+    finally {
+      isLoading.value = false
+    }
+  }
+
+  // Remove a router from the company topology (manual remove) — refreshes topology after
+  async function removeRouterFromTopology(routerId: string, companyId: string) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const response = await $apiFetch<{
+        status: string
+        message: string
+        data: unknown
+      }>(`/router/topology/layout/remove`, {
+        method: 'POST',
+        body: { routerId, companyId },
+      })
+
+      if (response && response.status === 'success') {
+        await fetchTopology(companyId)
+        await fetchConnections(companyId)
+        return { success: true, data: response.data }
+      }
+      else {
+        throw new Error(response?.message || 'Failed to remove router from topology')
+      }
+    }
+    catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to remove router from topology'
+      error.value = errorMsg
+      return { success: false, error: errorMsg }
+    }
+    finally {
+      isLoading.value = false
+    }
+  }
+
   interface NodePosition {
     routerId: string
     positionX: number
@@ -619,6 +687,8 @@ export const useTopologyStore = defineStore('topology', () => {
     getEdgesForNode,
     getConnectedNodes,
     clearError,
+    addRouterToTopology,
+    removeRouterFromTopology,
     fetchLayoutPositions,
     saveNodePosition,
     saveNodePositions,

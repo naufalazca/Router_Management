@@ -187,8 +187,17 @@ export class RouterConnectionService {
       }
     });
 
+    // Routers are opt-in: only routers manually added to the topology
+    // (a TopologyLayout row exists for the company/view) render as nodes.
+    const routerLayouts: Array<{ routerId: string }> = await (prisma as any).topologyLayout.findMany(
+      companyId ? { where: { companyId }, select: { routerId: true } } : { select: { routerId: true } }
+    );
+    const addedRouterIds = new Set(routerLayouts.map(l => l.routerId));
+
     // Transform to nodes and edges for topology visualization
-    const routerNodes: TopologyNode[] = routers.map((router) => ({
+    const routerNodes: TopologyNode[] = routers
+      .filter((router) => addedRouterIds.has(router.id))
+      .map((router) => ({
       id: router.id,
       name: router.name,
       ipAddress: router.ipAddress,
@@ -201,7 +210,10 @@ export class RouterConnectionService {
       companyName: (router as any).company?.name
     }));
 
-    const routerEdges: TopologyEdge[] = connections.map(conn => ({
+    // Router↔router edges are shown only when BOTH endpoints are manually added.
+    const routerEdges: TopologyEdge[] = connections
+      .filter(conn => addedRouterIds.has(conn.sourceRouterId) && addedRouterIds.has(conn.targetRouterId))
+      .map(conn => ({
       id: conn.id,
       source: conn.sourceRouterId,
       target: conn.targetRouterId,
@@ -237,7 +249,7 @@ export class RouterConnectionService {
       const visibleCompanySwitchIds = Array.from(addedSwitchIds);
 
       const deviceIds = new Set<string>([
-        ...routers.map(r => r.id),
+        ...Array.from(addedRouterIds),
         ...visibleCompanySwitchIds
       ]);
 
@@ -305,10 +317,14 @@ export class RouterConnectionService {
         switchNodes = switches.map(s => this.mapSwitchNode(s));
       }
 
-      // Foreign router endpoints must also be present as nodes so their edges resolve.
-      if (foreignRouterIds.size > 0) {
+      // Foreign router endpoints must also be present as nodes so their edges
+      // resolve — but routers are always opt-in: only show a foreign router
+      // if it was manually added to this company's topology too.
+      const visibleForeignRouterIds = Array.from(foreignRouterIds)
+        .filter(id => addedRouterIds.has(id));
+      if (visibleForeignRouterIds.length > 0) {
         const foreignRouters = await prisma.router.findMany({
-          where: { id: { in: Array.from(foreignRouterIds) } },
+          where: { id: { in: visibleForeignRouterIds } },
           include: { company: { select: { id: true, name: true } } }
         });
 
@@ -327,7 +343,15 @@ export class RouterConnectionService {
         switchNodes = [...switchNodes, ...foreignRouterNodes];
       }
 
-      switchEdges = visibleSwitchConnections.map(conn => this.mapSwitchEdge(conn));
+      // Drop switch edges whose router endpoint is not visible (hidden router),
+      // otherwise Vue Flow would silently drop the edge.
+      switchEdges = visibleSwitchConnections
+        .filter(conn => {
+          if (conn.sourceRouterId && !addedRouterIds.has(conn.sourceRouterId)) return false;
+          if (conn.targetRouterId && !addedRouterIds.has(conn.targetRouterId)) return false;
+          return true;
+        })
+        .map(conn => this.mapSwitchEdge(conn));
     } else {
       // Global view (no company filter): only switches that were manually
       // added to the topology (have a layout record) + all switch connections
@@ -353,12 +377,14 @@ export class RouterConnectionService {
       });
 
       // Only keep connections whose switch endpoints were manually added to the
-      // topology (have a layout record); otherwise edges would reference nodes
-      // that are not rendered. Router endpoints are always rendered as nodes.
+      // topology (have a layout record); router endpoints must also be manually
+      // added (have a TopologyLayout row) — routers are always opt-in.
       const addedSwitchIdSet = new Set(addedSwitchIdList);
       const visibleConnections = switchConnections.filter((conn) => {
         if (conn.sourceSwitchId && !addedSwitchIdSet.has(conn.sourceSwitchId)) return false;
         if (conn.targetSwitchId && !addedSwitchIdSet.has(conn.targetSwitchId)) return false;
+        if (conn.sourceRouterId && !addedRouterIds.has(conn.sourceRouterId)) return false;
+        if (conn.targetRouterId && !addedRouterIds.has(conn.targetRouterId)) return false;
         return true;
       });
 

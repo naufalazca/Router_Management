@@ -4,9 +4,13 @@ import type { TopologyEdge, TopologyNode } from '~/stores/router/router.topology
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { ConnectionMode, MarkerType, Position, useVueFlow, VueFlow } from '@vue-flow/core'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
-import TopologyConnections from '~/components/topology/TopologyConnections.vue'
+import { topologyFlowCss } from '~/components/topology/topology-visual'
+import TopologyDetailPanel from '~/components/topology/TopologyDetailPanel.vue'
+import TopologyEdgeComp from '~/components/topology/TopologyEdge.vue'
+import TopologyLegend from '~/components/topology/TopologyLegend.vue'
+import TopologyNodeComp from '~/components/topology/TopologyNode.vue'
 import { useTopologyStore } from '~/stores/router/router.topology'
 
 // Props
@@ -14,6 +18,7 @@ interface Props {
   nodes: TopologyNode[]
   edges: TopologyEdge[]
   companyId?: string
+  companyName?: string
 }
 
 const props = defineProps<Props>()
@@ -27,6 +32,15 @@ const emit = defineEmits<{
 const topologyStore = useTopologyStore()
 
 const { $apiFetch } = useApiFetch()
+
+// Selected node/edge for the detail panel (declared early: remove handlers reference it)
+const selectedNode = ref<TopologyNode | null>(null)
+const selectedEdge = ref<TopologyEdge | null>(null)
+const isDetailOpen = ref(false)
+const detailMode = ref<'node' | 'edge' | 'connection'>('node')
+const isCreatingConnection = ref(false)
+const isRemovingNode = ref(false)
+const connectionError = ref<string | null>(null)
 
 // ==========================================
 // Manual switch management (add/remove)
@@ -45,7 +59,6 @@ const isAddSwitchOpen = ref(false)
 const availableSwitches = ref<AvailableSwitch[]>([])
 const isLoadingAvailableSwitches = ref(false)
 const isAddingSwitch = ref(false)
-const isRemovingSwitch = ref(false)
 
 function ownerLabel(sw: AvailableSwitch): string | null {
   if (!sw.company || !props.companyId || sw.company.id === props.companyId)
@@ -102,12 +115,13 @@ async function handleAddSwitch(sw: AvailableSwitch) {
 }
 
 async function handleRemoveSwitchFromTopology() {
-  if (!props.companyId || !selectedNode.value || selectedNode.value.nodeType !== 'SWITCH')
+  if (!props.companyId || !selectedNode.value || selectedNode.value.nodeType !== 'SWITCH' || isRemovingNode.value)
     return
   const node = selectedNode.value
+  // eslint-disable-next-line no-alert -- legacy confirmation UX preserved
   if (!confirm(`Remove switch "${node.name}" from the topology? Its connections will also be removed.`))
     return
-  isRemovingSwitch.value = true
+  isRemovingNode.value = true
   try {
     await $apiFetch('/router/topology/switch-layout/remove', {
       method: 'POST',
@@ -117,14 +131,14 @@ async function handleRemoveSwitchFromTopology() {
       },
     })
     toast.success(`Switch "${node.name}" removed from topology`)
-    isNodeDetailOpen.value = false
+    isDetailOpen.value = false
     emit('connectionCreated') // triggers parent refresh
   }
   catch (err: any) {
     toast.error(err?.data?.message || 'Failed to remove switch from topology')
   }
   finally {
-    isRemovingSwitch.value = false
+    isRemovingNode.value = false
   }
 }
 
@@ -145,7 +159,6 @@ const isAddRouterOpen = ref(false)
 const availableRouters = ref<AvailableRouter[]>([])
 const isLoadingAvailableRouters = ref(false)
 const isAddingRouter = ref(false)
-const isRemovingRouter = ref(false)
 
 function routerOwnerLabel(r: AvailableRouter): string | null {
   if (!r.company || !props.companyId || r.company.id === props.companyId)
@@ -202,12 +215,13 @@ async function handleAddRouter(r: AvailableRouter) {
 }
 
 async function handleRemoveRouterFromTopology() {
-  if (!props.companyId || !selectedNode.value || selectedNode.value.nodeType !== 'ROUTER')
+  if (!props.companyId || !selectedNode.value || selectedNode.value.nodeType !== 'ROUTER' || isRemovingNode.value)
     return
   const node = selectedNode.value
+  // eslint-disable-next-line no-alert -- legacy confirmation UX preserved
   if (!confirm(`Remove router "${node.name}" from the topology? Its router connections will also be removed.`))
     return
-  isRemovingRouter.value = true
+  isRemovingNode.value = true
   try {
     await $apiFetch('/router/topology/layout/remove', {
       method: 'POST',
@@ -217,19 +231,32 @@ async function handleRemoveRouterFromTopology() {
       },
     })
     toast.success(`Router "${node.name}" removed from topology`)
-    isNodeDetailOpen.value = false
+    isDetailOpen.value = false
     emit('connectionCreated') // triggers parent refresh
   }
   catch (err: any) {
     toast.error(err?.data?.message || 'Failed to remove router from topology')
   }
   finally {
-    isRemovingRouter.value = false
+    isRemovingNode.value = false
   }
 }
 
 // VueFlow instance for getting node positions
-const { onNodeDragStop, onPaneReady, startConnection } = useVueFlow()
+const { onNodeDragStop, onPaneReady, startConnection, viewport } = useVueFlow()
+
+// Hoisted label-visibility decision: one debounced zoom watcher instead of a
+// per-edge viewport subscription (which re-rendered every edge on each zoom tick).
+const showEdgeLabels = ref(true)
+let zoomDebounce: ReturnType<typeof setTimeout> | null = null
+watch(() => viewport.value.zoom, (zoom) => {
+  if (zoomDebounce)
+    clearTimeout(zoomDebounce)
+  zoomDebounce = setTimeout(() => {
+    showEdgeLabels.value = zoom >= 0.75
+  }, 150)
+})
+provide('topologyShowEdgeLabels', showEdgeLabels)
 
 // Flow nodes/edges - any[] because motion-v's HTMLAttributes augmentation makes vue-flow Node/Edge
 // literal checks explode (TS2589/TS2322). Restore Node[]/Edge[] when @vue-flow and motion-v types align.
@@ -244,13 +271,9 @@ function syncEdges() {
     id: edge.id,
     source: edge.source,
     target: edge.target,
-    label: edge.bandwidth || '',
-    labelStyle: { fontSize: '11px', fontWeight: 400 },
-    labelBgStyle: { fill: '#fff', fillOpacity: 0.8 },
+    type: 'topology',
     data: edge,
-    style: getEdgeStyle(edge),
     markerEnd: MarkerType.ArrowClosed,
-    animated: edge.linkStatus === 'ACTIVE',
   }))
 }
 
@@ -296,7 +319,6 @@ async function savePositions() {
 
 // Save switch node positions via the switch-layout endpoint
 async function saveSwitchPositions(positions: Array<{ switchId: string, positionX: number, positionY: number }>) {
-  const { $apiFetch } = useApiFetch()
   try {
     await $apiFetch('/router/topology/switch-layout/bulk', {
       method: 'POST',
@@ -331,37 +353,34 @@ async function loadSavedPositions() {
   })
 }
 
-// Initialize flowNodes with nodes
+// Initialize flowNodes with nodes (custom node type, saved position or circular layout)
 function initializeNodes() {
   flowNodes.value = props.nodes.map((node, index) => {
     // Check if we have a saved position
     const savedPos = topologyStore.getNodePosition(node.id)
 
     if (savedPos) {
-      // Use saved position
       return {
         id: node.id,
-        label: node.name,
+        type: 'topology',
         position: { x: savedPos.x, y: savedPos.y },
         data: node,
-        style: getNodeStyle(node),
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
       }
     }
 
-    // Default: Position nodes in a circular layout
+    // Default: Position nodes in a circular layout (wider spacing for cards)
     const angle = (index / props.nodes.length) * 2 * Math.PI
-    const radius = Math.min(300, 50 + props.nodes.length * 30)
-    const x = 400 + radius * Math.cos(angle) - 100
-    const y = 300 + radius * Math.sin(angle) - 50
+    const radius = Math.min(420, 90 + props.nodes.length * 45)
+    const x = 500 + radius * Math.cos(angle) - 110
+    const y = 400 + radius * Math.sin(angle) - 55
 
     return {
       id: node.id,
-      label: node.name,
+      type: 'topology',
       position: { x, y },
       data: node,
-      style: getNodeStyle(node),
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
     }
@@ -378,48 +397,30 @@ watch(() => props.edges, () => {
   syncEdges()
 }, { deep: true, immediate: true })
 
-// Selected node/edge for details
-const selectedNode = ref<TopologyNode | null>(null)
-const selectedEdge = ref<TopologyEdge | null>(null)
-const isNodeDetailOpen = ref(false)
-const isEdgeDetailOpen = ref(false)
-const isCreateConnectionOpen = ref(false)
-const isCreatingConnection = ref(false)
-const connectionError = ref<string | null>(null)
+const pendingConnection = ref<Connection | null>(null)
 
-// New connection form data
-const newConnection = ref<{
-  sourceRouterId: string
-  targetRouterId: string
-  linkType: 'ETHERNET' | 'FIBER' | 'WIRELESS' | 'VPN'
-  linkStatus: 'ACTIVE' | 'INACTIVE' | 'PLANNED'
-  sourceInterface?: string
-  targetInterface?: string
-  bandwidth?: string
-  distance?: number
-  notes?: string
-  // Switch detail (only used when a switch endpoint is involved)
-  sourcePortNumber?: number
-  targetPortNumber?: number
-  vlan?: number
-  speed?: string
-}>({
-  sourceRouterId: '',
-  targetRouterId: '',
-  linkType: 'ETHERNET',
-  linkStatus: 'PLANNED',
-  sourceInterface: '',
-  targetInterface: '',
-  bandwidth: '',
-  distance: undefined,
-  notes: '',
-  sourcePortNumber: undefined,
-  targetPortNumber: undefined,
-  vlan: undefined,
-  speed: '',
+// Re-sync the open node panel after a topology refresh: the panel otherwise
+// keeps a stale snapshot while props.edges is fresh. Closes if node was removed.
+watch(() => props.nodes, () => {
+  if (isDetailOpen.value && detailMode.value === 'node' && selectedNode.value) {
+    const fresh = props.nodes.find(n => n.id === selectedNode.value!.id)
+    if (fresh) {
+      selectedNode.value = fresh
+    }
+    else {
+      selectedNode.value = null
+      isDetailOpen.value = false
+    }
+  }
 })
 
-const pendingConnection = ref<Connection | null>(null)
+// Clear abandoned connection-form state when the panel closes
+watch(isDetailOpen, (open) => {
+  if (!open && detailMode.value === 'connection') {
+    pendingConnection.value = null
+    connectionError.value = null
+  }
+})
 
 // Whether the pending connection involves a switch endpoint
 const involvesSwitch = computed(() => {
@@ -433,7 +434,6 @@ const involvesSwitch = computed(() => {
 // Loose connection mode + click-to-connect state
 const isConnecting = ref(false)
 const connectingSource = ref<string | null>(null)
-const isLegendOpen = ref(true)
 const connectionMode = ConnectionMode.Loose
 
 function handleConnectStart(params: { nodeId?: string }) {
@@ -446,106 +446,14 @@ function handleConnectEnd() {
   connectingSource.value = null
 }
 
-// Bandwidth presets
-const bandwidthPresets = [
-  '10Mbps',
-  '100Mbps',
-  '1Gbps',
-  '10Gbps',
-  '25Gbps',
-  '40Gbps',
-  '100Gbps',
-]
-
-// Get node style based on status and type
-function getNodeStyle(node: TopologyNode) {
-  const colors = getNodeColor(node)
-  return {
-    backgroundColor: colors.background,
-    borderLeft: `4px solid ${colors.border}`,
-    borderRadius: '8px',
-    color: '#1f2937',
-    fontSize: '13px',
-    fontWeight: '600',
-    padding: '12px 16px',
-    minWidth: '140px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-  }
-}
-
-// Get node color based on status and type
-function getNodeColor(node: TopologyNode) {
-  // Switch nodes get a distinct teal look, then status overrides
-  if (node.nodeType === 'SWITCH') {
-    if (node.status === 'INACTIVE')
-      return { background: '#fee2e2', border: '#ef4444' }
-    if (node.status === 'MAINTENANCE')
-      return { background: '#fef3c7', border: '#f59e0b' }
-    return { background: '#ccfbf1', border: '#14b8a6' } // teal
-  }
-
-  if (node.status === 'INACTIVE') {
-    return { background: '#fee2e2', border: '#ef4444' } // red
-  }
-  if (node.status === 'MAINTENANCE') {
-    return { background: '#fef3c7', border: '#f59e0b' } // yellow
-  }
-
-  // Active - color by type
-  switch (node.routerType) {
-    case 'UPSTREAM':
-      return { background: '#dbeafe', border: '#3b82f6' } // blue
-    case 'CORE':
-      return { background: '#dcfce7', border: '#22c55e' } // green
-    case 'DISTRIBUSI':
-      return { background: '#f3e8ff', border: '#8b5cf6' } // purple
-    case 'WIRELESS':
-      return { background: '#ffedd5', border: '#f97316' } // orange
-    default:
-      return { background: '#f1f5f9', border: '#64748b' } // gray
-  }
-}
-
-// Get edge style
-function getEdgeStyle(edge: TopologyEdge) {
-  return {
-    stroke: getEdgeColor(edge),
-    strokeWidth: edge.linkStatus === 'ACTIVE' ? 2.5 : 2,
-    strokeDasharray: edge.linkStatus === 'PLANNED' ? '5,5' : undefined,
-  }
-}
-
-// Get edge color based on type and status
-function getEdgeColor(edge: TopologyEdge): string {
-  if (edge.linkStatus === 'INACTIVE')
-    return '#ef4444'
-  if (edge.linkStatus === 'PLANNED')
-    return '#94a3b8'
-
-  if (edge.edgeType === 'SWITCH')
-    return '#14b8a6' // teal for switch links
-
-  switch (edge.linkType) {
-    case 'ETHERNET':
-      return '#22c55e' // green
-    case 'FIBER':
-      return '#3b82f6' // blue
-    case 'WIRELESS':
-      return '#f97316' // orange
-    case 'VPN':
-      return '#8b5cf6' // purple
-    default:
-      return '#64748b'
-  }
-}
-
 // Handle node click
 function onNodeClick(event: NodeMouseEvent) {
   selectedNode.value = event.node.data as TopologyNode
-  isNodeDetailOpen.value = true
+  detailMode.value = 'node'
+  isDetailOpen.value = true
 }
 
-// Start connect flow from node detail modal
+// Start connect flow from node detail panel
 function startConnectFromNode() {
   if (!selectedNode.value)
     return
@@ -569,14 +477,15 @@ function startConnectFromNode() {
   )
   isConnecting.value = true
   connectingSource.value = node.id
-  isNodeDetailOpen.value = false
+  isDetailOpen.value = false
   toast.info(`Click a target router port to connect from ${selectedNode.value.name}`)
 }
 
 // Handle edge click
 function onEdgeClick(event: EdgeMouseEvent) {
   selectedEdge.value = event.edge.data as TopologyEdge
-  isEdgeDetailOpen.value = true
+  detailMode.value = 'edge'
+  isDetailOpen.value = true
 }
 
 // Handle connection creation - open form dialog
@@ -606,34 +515,18 @@ function handleConnect(connection: Connection) {
   // Store pending connection
   pendingConnection.value = connection
 
-  // Get source and target node info
   const sourceNode = props.nodes.find(n => n.id === connection.source)
   const targetNode = props.nodes.find(n => n.id === connection.target)
 
   if (sourceNode && targetNode) {
-    // Initialize form with connection data
-    newConnection.value = {
-      sourceRouterId: connection.source,
-      targetRouterId: connection.target,
-      linkType: 'ETHERNET',
-      linkStatus: 'PLANNED',
-      sourceInterface: '',
-      targetInterface: '',
-      bandwidth: '',
-      distance: undefined,
-      notes: '',
-      sourcePortNumber: undefined,
-      targetPortNumber: undefined,
-      vlan: undefined,
-      speed: '',
-    }
     connectionError.value = null
-    isCreateConnectionOpen.value = true
+    detailMode.value = 'connection'
+    isDetailOpen.value = true
   }
 }
 
-// Submit new connection
-async function submitConnection() {
+// Submit new connection (payload comes from the detail panel form)
+async function submitConnection(payload: Record<string, unknown>) {
   if (!pendingConnection.value)
     return
 
@@ -653,30 +546,30 @@ async function submitConnection() {
       result = await topologyStore.createSwitchConnection({
         source: endpointOf(sourceNode),
         target: endpointOf(targetNode),
-        linkType: newConnection.value.linkType,
-        linkStatus: newConnection.value.linkStatus,
-        sourceInterface: newConnection.value.sourceInterface || undefined,
-        targetInterface: newConnection.value.targetInterface || undefined,
-        sourcePortNumber: newConnection.value.sourcePortNumber || undefined,
-        targetPortNumber: newConnection.value.targetPortNumber || undefined,
-        vlan: newConnection.value.vlan || undefined,
-        speed: newConnection.value.speed || undefined,
-        bandwidth: newConnection.value.bandwidth || undefined,
-        distance: newConnection.value.distance,
-        notes: newConnection.value.notes,
+        linkType: payload.linkType as any,
+        linkStatus: payload.linkStatus as any,
+        sourceInterface: (payload.sourceInterface as string) || undefined,
+        targetInterface: (payload.targetInterface as string) || undefined,
+        sourcePortNumber: (payload.sourcePortNumber as number) || undefined,
+        targetPortNumber: (payload.targetPortNumber as number) || undefined,
+        vlan: (payload.vlan as number) || undefined,
+        speed: (payload.speed as string) || undefined,
+        bandwidth: (payload.bandwidth as string) || undefined,
+        distance: payload.distance as number | undefined,
+        notes: payload.notes as string | undefined,
       }, props.companyId)
     }
     else {
       result = await topologyStore.createConnection({
-        sourceRouterId: newConnection.value.sourceRouterId,
-        targetRouterId: newConnection.value.targetRouterId,
-        linkType: newConnection.value.linkType,
-        linkStatus: newConnection.value.linkStatus,
-        sourceInterface: newConnection.value.sourceInterface || undefined,
-        targetInterface: newConnection.value.targetInterface || undefined,
-        bandwidth: newConnection.value.bandwidth || undefined,
-        distance: newConnection.value.distance,
-        notes: newConnection.value.notes,
+        sourceRouterId: pendingConnection.value.source,
+        targetRouterId: pendingConnection.value.target,
+        linkType: payload.linkType as any,
+        linkStatus: payload.linkStatus as any,
+        sourceInterface: (payload.sourceInterface as string) || undefined,
+        targetInterface: (payload.targetInterface as string) || undefined,
+        bandwidth: (payload.bandwidth as string) || undefined,
+        distance: payload.distance as number | undefined,
+        notes: payload.notes as string | undefined,
       })
     }
 
@@ -684,7 +577,7 @@ async function submitConnection() {
       // Emit event to parent to refresh data
       emit('connectionCreated')
       // Close dialog and reset
-      isCreateConnectionOpen.value = false
+      isDetailOpen.value = false
       pendingConnection.value = null
     }
     else {
@@ -699,19 +592,6 @@ async function submitConnection() {
   }
 }
 
-// Cancel connection creation
-function cancelConnection() {
-  isCreateConnectionOpen.value = false
-  pendingConnection.value = null
-  connectionError.value = null
-}
-
-// Get node name by ID
-function getNodeName(nodeId: string): string {
-  const node = props.nodes.find(n => n.id === nodeId)
-  return node?.name || nodeId
-}
-
 // Delete connection (routes by edge type)
 async function handleDeleteEdge(edgeId: string) {
   const edge = props.edges.find(e => e.id === edgeId)
@@ -721,12 +601,9 @@ async function handleDeleteEdge(edgeId: string) {
   else {
     await topologyStore.deleteConnection(edgeId)
   }
-  isEdgeDetailOpen.value = false
+  isDetailOpen.value = false
   emit('connectionCreated') // Refresh topology after delete
 }
-
-// Delete node (not implemented - nodes are routers)
-// Routers should be deleted from the router page
 
 // Esc cancels an in-progress click-to-connect gesture
 function onKeydown(e: KeyboardEvent) {
@@ -735,16 +612,43 @@ function onKeydown(e: KeyboardEvent) {
     flowEdges.value = flowEdges.value.filter(edge => props.edges.some(p => p.id === edge.id))
   }
 }
-onMounted(() => window.addEventListener('keydown', onKeydown))
+// Inject the shared flow animation CSS once per app session (static constant, non-scoped)
+let flowCssInjected = false
+
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+  if (!flowCssInjected) {
+    const style = document.createElement('style')
+    style.textContent = topologyFlowCss
+    document.head.appendChild(style)
+    flowCssInjected = true
+  }
+})
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
+
+// Pending connection endpoint names for the create form
+const pendingSourceName = computed(() =>
+  pendingConnection.value ? props.nodes.find(n => n.id === pendingConnection.value!.source)?.name : '',
+)
+const pendingTargetName = computed(() =>
+  pendingConnection.value ? props.nodes.find(n => n.id === pendingConnection.value!.target)?.name : '',
+)
+
+const nodeCount = computed(() => props.nodes.length)
+const edgeCount = computed(() => props.edges.length)
+
+// Identity of the pending connection; the panel's form resets when this changes
+const connectionKey = computed(() =>
+  pendingConnection.value ? `${pendingConnection.value.source}->${pendingConnection.value.target}` : '',
+)
 </script>
 
 <template>
-  <div class="w-full space-y-4">
-    <!-- Vue Flow Container -->
+  <div class="w-full">
+    <!-- Vue Flow Container: full-bleed glass canvas -->
     <div
-      class="relative w-full rounded-lg border bg-card overflow-hidden"
-      style="height: max(60vh, 480px);"
+      class="topology-canvas relative w-full overflow-hidden rounded-xl border border-border/60 bg-background"
+      style="height: max(70vh, 560px);"
     >
       <VueFlow
         v-model:nodes="flowNodes"
@@ -762,598 +666,123 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         @connect-start="handleConnectStart"
         @connect-end="handleConnectEnd"
       >
+        <!-- Custom node/edge renderers -->
+        <template #node-topology="nodeProps">
+          <TopologyNodeComp v-bind="nodeProps" />
+        </template>
+        <template #edge-topology="edgeProps">
+          <TopologyEdgeComp v-bind="edgeProps" />
+        </template>
+
         <!-- Background -->
-        <Background />
+        <Background pattern-color="var(--border)" :gap="24" />
+        <!-- gap 24 & themed dot color keeps the grid subtle in both themes -->
 
         <!-- Controls -->
-        <Controls />
+        <Controls position="bottom-left" />
       </VueFlow>
 
-      <!-- Add Switch / Add Router buttons overlay -->
-      <div class="absolute top-3 right-3 z-20 flex items-center gap-2">
-        <button
-          class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
-          :disabled="!companyId"
-          @click="openAddRouterModal"
-        >
-          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-          </svg>
-          Add Router
-        </button>
-        <button
-          class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
-          :disabled="!companyId"
-          @click="openAddSwitchModal"
-        >
-          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-          </svg>
-          Add Switch
-        </button>
+      <!-- Floating glass toolbar (top-left) -->
+      <div class="pointer-events-none absolute top-3 left-3 z-20 flex items-center gap-2">
+        <div class="pointer-events-auto flex items-center gap-1 rounded-xl border border-border/60 bg-card/70 p-1 shadow-md backdrop-blur-md">
+          <Button
+            size="sm"
+            class="gap-1.5"
+            :disabled="!companyId"
+            @click="openAddRouterModal"
+          >
+            <Icon name="lucide:router" class="size-4" aria-hidden="true" />
+            <span class="hidden sm:inline">Add Router</span>
+            <span class="sr-only sm:hidden">Add Router</span>
+          </Button>
+          <Button
+            size="sm"
+            class="gap-1.5"
+            :disabled="!companyId"
+            @click="openAddSwitchModal"
+          >
+            <Icon name="lucide:hard-drive" class="size-4" aria-hidden="true" />
+            <span class="hidden sm:inline">Add Switch</span>
+            <span class="sr-only sm:hidden">Add Switch</span>
+          </Button>
+          <span class="mx-1 h-5 w-px bg-border" aria-hidden="true" />
+          <span class="px-2 text-xs font-medium text-muted-foreground">
+            <span class="font-semibold text-foreground">{{ nodeCount }}</span> devices
+            ·
+            <span class="font-semibold text-foreground">{{ edgeCount }}</span> links
+          </span>
+        </div>
       </div>
 
-      <!-- Connecting hint overlay -->
+      <!-- Connecting hint pill (center-top) -->
       <div
         v-if="isConnecting"
-        class="pointer-events-none absolute top-3 left-1/2 z-20 -translate-x-1/2 rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground shadow-lg"
+        class="pointer-events-none absolute top-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-primary/30 bg-card/90 px-4 py-1.5 text-sm font-medium text-foreground shadow-lg backdrop-blur-md"
+        role="status"
       >
+        <Icon name="lucide:zap" class="size-4 text-primary" aria-hidden="true" />
         Click a target router port to connect · Esc to cancel
       </div>
 
-      <!-- Legend overlay -->
-      <div class="absolute bottom-3 right-3 z-20">
-        <div
-          v-if="isLegendOpen"
-          class="rounded-lg border bg-card/95 p-3 shadow-md backdrop-blur"
-        >
-          <div class="flex items-center justify-between gap-6 mb-2">
-            <p class="text-xs font-semibold">
-              Legend
-            </p>
-            <button
-              class="text-muted-foreground hover:text-foreground"
-              aria-label="Hide legend"
-              @click="isLegendOpen = false"
-            >
-              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div class="grid grid-cols-2 gap-x-6 gap-y-1">
-            <div>
-              <p class="text-[10px] font-medium text-muted-foreground mb-1">
-                Router Types
-              </p>
-              <div class="space-y-0.5">
-                <div class="flex items-center gap-1.5">
-                  <div class="h-2 w-2 rounded bg-blue-600" />
-                  <span class="text-[10px]">Upstream</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <div class="h-2 w-2 rounded bg-green-600" />
-                  <span class="text-[10px]">Core</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <div class="h-2 w-2 rounded bg-purple-600" />
-                  <span class="text-[10px]">Distribution</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <div class="h-2 w-2 rounded bg-orange-600" />
-                  <span class="text-[10px]">Wireless</span>
-                </div>
-              </div>
-            </div>
-            <div>
-              <p class="text-[10px] font-medium text-muted-foreground mb-1">
-                Connections
-              </p>
-              <div class="space-y-0.5">
-                <div class="flex items-center gap-1.5">
-                  <div class="h-0.5 w-5 bg-green-600" />
-                  <span class="text-[10px]">Ethernet</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <div class="h-0.5 w-5 bg-blue-600" />
-                  <span class="text-[10px]">Fiber</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <div class="h-0.5 w-5 bg-orange-600" />
-                  <span class="text-[10px]">Wireless</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <div class="h-0.5 w-5 bg-purple-600" />
-                  <span class="text-[10px]">VPN</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <button
-          v-else
-          class="flex items-center gap-1.5 rounded-md border bg-card/95 px-2 py-1 text-xs text-muted-foreground shadow-md backdrop-blur hover:text-foreground"
-          @click="isLegendOpen = true"
-        >
-          <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-          Legend
-        </button>
+      <!-- Company chip (top-right) -->
+      <div
+        v-if="companyName"
+        class="pointer-events-none absolute top-3 right-3 z-20 flex items-center gap-1.5 rounded-full border border-border/60 bg-card/70 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-md backdrop-blur-md"
+      >
+        <Icon name="lucide:building-2" class="size-3.5" aria-hidden="true" />
+        {{ companyName }}
+      </div>
+
+      <!-- Floating glass legend + guide (bottom-right) -->
+      <div class="absolute right-3 bottom-3 z-20">
+        <TopologyLegend />
       </div>
     </div>
 
-    <!-- Create Connection Dialog -->
-    <div
-      v-if="isCreateConnectionOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      @click.self="cancelConnection"
-    >
-      <div class="bg-card rounded-lg shadow-lg max-w-lg w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold">
-            Create New Connection
-          </h3>
-          <button
-            class="text-muted-foreground hover:text-foreground"
-            @click="cancelConnection"
-          >
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <!-- Connection Info -->
-        <div class="mb-4 p-3 bg-muted/50 rounded-lg">
-          <p class="text-sm font-medium">
-            Connecting:
-          </p>
-          <p class="text-sm text-muted-foreground">
-            {{ getNodeName(newConnection.sourceRouterId) }} → {{ getNodeName(newConnection.targetRouterId) }}
-          </p>
-        </div>
-
-        <!-- Error Message -->
-        <div
-          v-if="connectionError"
-          class="mb-4 p-3 bg-destructive/10 text-destructive rounded-lg text-sm"
-        >
-          {{ connectionError }}
-        </div>
-
-        <!-- Connection Form -->
-        <form class="space-y-4" @submit.prevent="submitConnection">
-          <!-- Link Type -->
-          <div>
-            <label class="block text-sm font-medium mb-1.5">
-              Link Type <span class="text-destructive">*</span>
-            </label>
-            <select
-              v-model="newConnection.linkType"
-              required
-              class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="ETHERNET">
-                Ethernet
-              </option>
-              <option value="FIBER">
-                Fiber Optic
-              </option>
-              <option value="WIRELESS">
-                Wireless
-              </option>
-              <option value="VPN">
-                VPN Tunnel
-              </option>
-            </select>
-          </div>
-
-          <!-- Link Status -->
-          <div>
-            <label class="block text-sm font-medium mb-1.5">
-              Link Status <span class="text-destructive">*</span>
-            </label>
-            <select
-              v-model="newConnection.linkStatus"
-              required
-              class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="PLANNED">
-                Planned
-              </option>
-              <option value="ACTIVE">
-                Active
-              </option>
-              <option value="INACTIVE">
-                Inactive
-              </option>
-            </select>
-          </div>
-
-          <!-- Source & Target Interface -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                Source Interface
-              </label>
-              <input
-                v-model="newConnection.sourceInterface"
-                type="text"
-                placeholder="e.g., ether1"
-                class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                Target Interface
-              </label>
-              <input
-                v-model="newConnection.targetInterface"
-                type="text"
-                placeholder="e.g., ether2"
-                class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-            </div>
-          </div>
-
-          <!-- Switch Detail (only when a switch endpoint is involved) -->
-          <template v-if="involvesSwitch">
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium mb-1.5">
-                  Source Port Number
-                </label>
-                <input
-                  v-model.number="newConnection.sourcePortNumber"
-                  type="number"
-                  min="1"
-                  placeholder="e.g., 1"
-                  class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1.5">
-                  Target Port Number
-                </label>
-                <input
-                  v-model.number="newConnection.targetPortNumber"
-                  type="number"
-                  min="1"
-                  placeholder="e.g., 24"
-                  class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium mb-1.5">
-                  VLAN
-                </label>
-                <input
-                  v-model.number="newConnection.vlan"
-                  type="number"
-                  min="1"
-                  placeholder="e.g., 10"
-                  class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1.5">
-                  Speed
-                </label>
-                <input
-                  v-model="newConnection.speed"
-                  type="text"
-                  placeholder="e.g., 1Gbps"
-                  class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-              </div>
-            </div>
-          </template>
-
-          <!-- Bandwidth -->
-          <div>
-            <label class="block text-sm font-medium mb-1.5">
-              Bandwidth
-            </label>
-            <div class="flex gap-2">
-              <input
-                v-model="newConnection.bandwidth"
-                type="text"
-                list="bandwidth-presets"
-                placeholder="e.g., 1Gbps"
-                class="flex-1 px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-              <datalist id="bandwidth-presets">
-                <option v-for="preset in bandwidthPresets" :key="preset" :value="preset" />
-              </datalist>
-            </div>
-            <p class="text-xs text-muted-foreground mt-1">
-              Common values: 10Mbps, 100Mbps, 1Gbps, 10Gbps
-            </p>
-          </div>
-
-          <!-- Distance (for wireless) -->
-          <div>
-            <label class="block text-sm font-medium mb-1.5">
-              Distance (meters)
-            </label>
-            <input
-              v-model.number="newConnection.distance"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="e.g., 500"
-              class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-            <p class="text-xs text-muted-foreground mt-1">
-              Especially useful for wireless links
-            </p>
-          </div>
-
-          <!-- Notes -->
-          <div>
-            <label class="block text-sm font-medium mb-1.5">
-              Notes
-            </label>
-            <textarea
-              v-model="newConnection.notes"
-              rows="3"
-              placeholder="Additional information about this connection..."
-              class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-            />
-          </div>
-
-          <!-- Actions -->
-          <div class="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              :disabled="isCreatingConnection"
-              class="px-4 py-2 border border-input rounded-md hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
-              @click="cancelConnection"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              :disabled="isCreatingConnection"
-              class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
-            >
-              <svg
-                v-if="isCreatingConnection"
-                class="h-4 w-4 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              {{ isCreatingConnection ? 'Creating...' : 'Create Connection' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Node Detail Dialog -->
-    <div
-      v-if="isNodeDetailOpen && selectedNode"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      @click.self="isNodeDetailOpen = false"
-    >
-      <div class="bg-card rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold">
-            {{ selectedNode.nodeType === 'SWITCH' ? 'Switch Details' : 'Router Details' }}
-          </h3>
-          <button
-            class="text-muted-foreground hover:text-foreground"
-            @click="isNodeDetailOpen = false"
-          >
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <div class="space-y-3">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <p class="text-sm text-muted-foreground">
-                Name
-              </p>
-              <p class="font-medium">
-                {{ selectedNode.name }}
-              </p>
-            </div>
-            <div>
-              <p class="text-sm text-muted-foreground">
-                IP Address
-              </p>
-              <p class="font-medium">
-                {{ selectedNode.ipAddress }}
-              </p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <p class="text-sm text-muted-foreground">
-                Type
-              </p>
-              <p class="font-medium">
-                {{ selectedNode.nodeType === 'SWITCH' ? 'Switch' : (selectedNode.routerType || 'Router') }}
-              </p>
-            </div>
-            <div>
-              <p class="text-sm text-muted-foreground">
-                Status
-              </p>
-              <span
-                class="inline-flex px-2 py-0.5 rounded text-xs font-medium"
-                :class="{
-                  'bg-green-100 text-green-800': selectedNode.status === 'ACTIVE',
-                  'bg-red-100 text-red-800': selectedNode.status === 'INACTIVE',
-                  'bg-yellow-100 text-yellow-800': selectedNode.status === 'MAINTENANCE',
-                }"
-              >
-                {{ selectedNode.status }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Switch-specific fields -->
-          <div v-if="selectedNode.nodeType === 'SWITCH'" class="grid grid-cols-2 gap-4">
-            <div>
-              <p class="text-sm text-muted-foreground">
-                Brand
-              </p>
-              <p class="font-medium">
-                {{ selectedNode.brand || '—' }}
-              </p>
-            </div>
-            <div>
-              <p class="text-sm text-muted-foreground">
-                Port Count
-              </p>
-              <p class="font-medium">
-                {{ selectedNode.portCount || '—' }}
-              </p>
-            </div>
-          </div>
-
-          <div v-if="selectedNode.location">
-            <p class="text-sm text-muted-foreground">
-              Location
-            </p>
-            <p class="font-medium">
-              {{ selectedNode.location }}
-            </p>
-          </div>
-
-          <div v-if="selectedNode.companyName">
-            <p class="text-sm text-muted-foreground">
-              Company
-            </p>
-            <p class="font-medium">
-              {{ selectedNode.companyName }}
-            </p>
-          </div>
-        </div>
-
-        <div class="mt-6 flex justify-between">
-          <div class="flex items-center gap-2">
-            <button
-              v-if="selectedNode.nodeType === 'SWITCH'"
-              class="inline-flex items-center gap-2 px-4 py-2 border border-destructive/50 text-destructive rounded-md hover:bg-destructive/10 disabled:opacity-50"
-              :disabled="isRemovingSwitch"
-              @click="handleRemoveSwitchFromTopology"
-            >
-              <svg
-                v-if="isRemovingSwitch"
-                class="h-4 w-4 animate-spin"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              Remove from Topology
-            </button>
-            <button
-              v-else-if="selectedNode.nodeType === 'ROUTER'"
-              class="inline-flex items-center gap-2 px-4 py-2 border border-destructive/50 text-destructive rounded-md hover:bg-destructive/10 disabled:opacity-50"
-              :disabled="isRemovingRouter"
-              @click="handleRemoveRouterFromTopology"
-            >
-              <svg
-                v-if="isRemovingRouter"
-                class="h-4 w-4 animate-spin"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              Remove from Topology
-            </button>
-            <button
-              class="inline-flex items-center gap-2 px-4 py-2 border border-input rounded-md hover:bg-accent hover:text-accent-foreground"
-              @click="startConnectFromNode"
-            >
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11-9 11z" />
-              </svg>
-              Create Connection
-            </button>
-          </div>
-          <button
-            class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-            @click="isNodeDetailOpen = false"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Edge Detail Dialog -->
-    <TopologyConnections
-      :is-open="isEdgeDetailOpen"
+    <!-- Detail panel (node / edge / create-connection) -->
+    <TopologyDetailPanel
+      :open="isDetailOpen"
+      :mode="detailMode"
+      :node="selectedNode"
       :edge="selectedEdge"
-      @close="isEdgeDetailOpen = false"
-      @delete="handleDeleteEdge"
-      @updated="emit('connectionCreated')"
+      :nodes="props.nodes"
+      :edges="props.edges"
+      :involves-switch="involvesSwitch"
+      :is-submitting="isCreatingConnection"
+      :is-removing="isRemovingNode"
+      :error="connectionError"
+      :source-name="pendingSourceName"
+      :target-name="pendingTargetName"
+      :connection-key="connectionKey"
+      @close="isDetailOpen = false"
+      @create-connection="startConnectFromNode"
+      @remove-node="selectedNode?.nodeType === 'SWITCH' ? handleRemoveSwitchFromTopology() : handleRemoveRouterFromTopology()"
+      @connection-submit="submitConnection"
+      @edge-delete="handleDeleteEdge"
+      @edge-updated="emit('connectionCreated')"
     />
 
     <!-- Add Switch Modal -->
-    <div
-      v-if="isAddSwitchOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      @click.self="isAddSwitchOpen = false"
-    >
-      <div class="bg-card rounded-lg shadow-lg max-w-md w-full mx-4 p-6 max-h-[80vh] overflow-y-auto">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold">
-            Add Switch to Topology
-          </h3>
-          <button
-            class="text-muted-foreground hover:text-foreground"
-            @click="isAddSwitchOpen = false"
-          >
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <p class="text-sm text-muted-foreground mb-4">
-          Select a switch to add to the topology. Switches are not added automatically.
-        </p>
+    <Dialog :open="isAddSwitchOpen" @update:open="(v: boolean) => (isAddSwitchOpen = v)">
+      <DialogContent class="max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add Switch to Topology</DialogTitle>
+          <DialogDescription>
+            Select a switch to add to the topology. Switches are not added automatically.
+          </DialogDescription>
+        </DialogHeader>
 
         <!-- Loading -->
-        <div
-          v-if="isLoadingAvailableSwitches"
-          class="flex items-center justify-center py-8"
-        >
-          <svg class="h-8 w-8 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
+        <div v-if="isLoadingAvailableSwitches" class="flex items-center justify-center py-8">
+          <Icon name="lucide:loader-circle" class="size-8 animate-spin text-primary" aria-hidden="true" />
         </div>
 
         <!-- Available Switches -->
-        <div
-          v-else-if="availableSwitches.length > 0"
-          class="space-y-2"
-        >
+        <div v-else-if="availableSwitches.length > 0" class="space-y-2">
           <button
             v-for="sw in availableSwitches"
             :key="sw.id"
-            class="w-full flex items-center justify-between rounded-lg border border-border p-3 text-left transition-colors hover:border-primary hover:bg-accent/50 disabled:opacity-50"
+            class="flex w-full cursor-pointer items-center justify-between rounded-lg border border-border p-3 text-left transition-colors hover:border-primary hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
             :disabled="isAddingSwitch"
             @click="handleAddSwitch(sw)"
           >
@@ -1369,66 +798,38 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                 </template>
               </p>
             </div>
-            <svg class="h-5 w-5 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
+            <Icon name="lucide:plus" class="size-5 text-muted-foreground" aria-hidden="true" />
           </button>
         </div>
 
         <!-- Empty -->
-        <div
-          v-else
-          class="text-center text-muted-foreground py-8"
-        >
+        <div v-else class="py-8 text-center text-muted-foreground">
           <p>No switches available to add. Either every switch is already in your topology, or no switches exist yet.</p>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
 
     <!-- Add Router Modal -->
-    <div
-      v-if="isAddRouterOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      @click.self="isAddRouterOpen = false"
-    >
-      <div class="bg-card rounded-lg shadow-lg max-w-md w-full mx-4 p-6 max-h-[80vh] overflow-y-auto">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold">
-            Add Router to Topology
-          </h3>
-          <button
-            class="text-muted-foreground hover:text-foreground"
-            @click="isAddRouterOpen = false"
-          >
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <p class="text-sm text-muted-foreground mb-4">
-          Select a router to add to the topology. Routers are not added automatically.
-        </p>
+    <Dialog :open="isAddRouterOpen" @update:open="(v: boolean) => (isAddRouterOpen = v)">
+      <DialogContent class="max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add Router to Topology</DialogTitle>
+          <DialogDescription>
+            Select a router to add to the topology. Routers are not added automatically.
+          </DialogDescription>
+        </DialogHeader>
 
         <!-- Loading -->
-        <div
-          v-if="isLoadingAvailableRouters"
-          class="flex items-center justify-center py-8"
-        >
-          <svg class="h-8 w-8 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
+        <div v-if="isLoadingAvailableRouters" class="flex items-center justify-center py-8">
+          <Icon name="lucide:loader-circle" class="size-8 animate-spin text-primary" aria-hidden="true" />
         </div>
 
         <!-- Available Routers -->
-        <div
-          v-else-if="availableRouters.length > 0"
-          class="space-y-2"
-        >
+        <div v-else-if="availableRouters.length > 0" class="space-y-2">
           <button
             v-for="r in availableRouters"
             :key="r.id"
-            class="w-full flex items-center justify-between rounded-lg border border-border p-3 text-left transition-colors hover:border-primary hover:bg-accent/50 disabled:opacity-50"
+            class="flex w-full cursor-pointer items-center justify-between rounded-lg border border-border p-3 text-left transition-colors hover:border-primary hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
             :disabled="isAddingRouter"
             @click="handleAddRouter(r)"
           >
@@ -1444,37 +845,88 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                 </template>
               </p>
             </div>
-            <svg class="h-5 w-5 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
+            <Icon name="lucide:plus" class="size-5 text-muted-foreground" aria-hidden="true" />
           </button>
         </div>
 
         <!-- Empty -->
-        <div
-          v-else
-          class="text-center text-muted-foreground py-8"
-        >
+        <div v-else class="py-8 text-center text-muted-foreground">
           <p>No routers available to add. Either every router is already in your topology, or no routers exist yet.</p>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
 
 <style>
-/* Import Vue Flow styles */
+/* Import Vue Flow styles (must stay global; not in nuxt.config) */
 @import '@vue-flow/core/dist/style.css';
 @import '@vue-flow/core/dist/theme-default.css';
 @import '@vue-flow/controls/dist/style.css';
 
-.custom-node {
-  cursor: pointer;
-  transition: all 0.2s;
+/* Subtle glass/grid backdrop behind the canvas */
+.topology-canvas {
+  background-image:
+    radial-gradient(circle at 1px 1px, color-mix(in oklch, var(--border) 55%, transparent) 1px, transparent 0);
+  background-size: 24px 24px;
 }
 
-.custom-node:hover {
-  filter: brightness(0.95);
+/* Hide Vue Flow's default dot pattern duplication: our CSS grid above is the backdrop */
+.topology-canvas .vue-flow__background {
+  opacity: 0.55;
+}
+
+/* Node card base (custom node uses its own component; keep generic cursor here) */
+.vue-flow__node-topology,
+.vue-flow__edge-topology {
+  cursor: pointer;
+}
+
+/* Themed controls */
+.vue-flow__controls {
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+  background: color-mix(in oklch, var(--card) 80%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.vue-flow__controls-button {
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+  fill: var(--foreground);
+}
+
+.vue-flow__controls-button:hover {
+  background: var(--accent);
+}
+
+/* Connection line while dragging a new connection */
+.vue-flow__connection-path {
+  stroke: var(--primary);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+
+/* Edge hover emphasis without moving endpoints */
+.topology-edge .topology-edge-stroke {
+  transition: stroke-width 0.15s ease, opacity 0.15s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topology-edge .topology-edge-stroke {
+    transition: none;
+  }
+
+  .topology-node,
+  .vue-flow__node-topology,
+  .vue-flow__edge-topology {
+    /* Only disable transitions — `transform` is functional in Vue Flow
+       (nodes are positioned via inline transform: translate(x, y)), so
+       `transform: none` would freeze nodes and break dragging entirely. */
+    transition: none !important;
+  }
 }
 
 /* Enlarge connection handle hit targets (default ~6px, below WCAG target size) */
@@ -1482,6 +934,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   width: 12px;
   height: 12px;
   border-radius: 9999px;
+  border: 2px solid var(--card);
+  background: var(--ring);
   transition: box-shadow 0.15s, background-color 0.15s;
 }
 
@@ -1498,13 +952,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 }
 
 .vue-flow__handle:hover {
-  box-shadow: 0 0 0 4px rgb(59 130 246 / 0.3);
+  background: var(--primary);
+  box-shadow: 0 0 0 4px color-mix(in oklch, var(--ring) 35%, transparent);
 }
 
-/* Dark mode adjustments */
-@media (prefers-color-scheme: dark) {
-  .custom-node {
-    color: #fff;
-  }
+/* Remove the default theme node label look (custom component draws its own) */
+.vue-flow__node-topology {
+  padding: 0;
+  border: none;
+  background: transparent;
+  width: auto;
 }
 </style>

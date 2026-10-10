@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TopologyEdge } from '~/stores/router/router.topology'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 import { useTopologyStore } from '~/stores/router/router.topology'
 
@@ -35,6 +35,11 @@ const editData = ref<{
   targetInterface: string
   bandwidth: string
   distance: number | undefined
+  // Switch detail
+  sourcePortNumber: number | undefined
+  targetPortNumber: number | undefined
+  vlan: number | undefined
+  speed: string
 }>({
   linkType: 'ETHERNET',
   linkStatus: 'PLANNED',
@@ -42,7 +47,14 @@ const editData = ref<{
   targetInterface: '',
   bandwidth: '',
   distance: undefined,
+  sourcePortNumber: undefined,
+  targetPortNumber: undefined,
+  vlan: undefined,
+  speed: '',
 })
+
+// Whether this edge is a switch connection
+const isSwitchEdge = computed(() => props.edge?.edgeType === 'SWITCH')
 
 // Bandwidth presets
 const bandwidthPresets = [
@@ -65,6 +77,10 @@ watch(() => props.edge, (newEdge) => {
       targetInterface: newEdge.targetInterface || '',
       bandwidth: newEdge.bandwidth || '',
       distance: newEdge.distance,
+      sourcePortNumber: newEdge.sourcePortNumber,
+      targetPortNumber: newEdge.targetPortNumber,
+      vlan: newEdge.vlan,
+      speed: newEdge.speed || '',
     }
   }
 }, { immediate: true })
@@ -108,6 +124,10 @@ function handleCancelEdit() {
       targetInterface: props.edge.targetInterface || '',
       bandwidth: props.edge.bandwidth || '',
       distance: props.edge.distance,
+      sourcePortNumber: props.edge.sourcePortNumber,
+      targetPortNumber: props.edge.targetPortNumber,
+      vlan: props.edge.vlan,
+      speed: props.edge.speed || '',
     }
   }
 }
@@ -121,14 +141,24 @@ async function handleSaveEdit() {
   editError.value = null
 
   try {
-    const result = await topologyStore.updateConnection(props.edge.id, {
+    const commonPayload = {
       linkType: editData.value.linkType,
       linkStatus: editData.value.linkStatus,
       sourceInterface: editData.value.sourceInterface || undefined,
       targetInterface: editData.value.targetInterface || undefined,
       bandwidth: editData.value.bandwidth || undefined,
       distance: editData.value.distance,
-    })
+    }
+
+    const result = isSwitchEdge.value
+      ? await topologyStore.updateSwitchConnection(props.edge.id, {
+          ...commonPayload,
+          sourcePortNumber: editData.value.sourcePortNumber,
+          targetPortNumber: editData.value.targetPortNumber,
+          vlan: editData.value.vlan,
+          speed: editData.value.speed || undefined,
+        })
+      : await topologyStore.updateConnection(props.edge.id, commonPayload)
 
     if (result.success) {
       toast.success('Connection updated successfully')
@@ -216,6 +246,42 @@ async function handleSaveEdit() {
           <p class="font-medium">
             {{ edge.bandwidth }}
           </p>
+        </div>
+
+        <!-- Switch detail -->
+        <div v-if="edge.edgeType === 'SWITCH'" class="grid grid-cols-2 gap-4">
+          <div v-if="edge.sourcePortNumber">
+            <p class="text-sm text-muted-foreground">
+              Source Port
+            </p>
+            <p class="font-medium font-mono text-xs">
+              {{ edge.sourcePortNumber }}
+            </p>
+          </div>
+          <div v-if="edge.targetPortNumber">
+            <p class="text-sm text-muted-foreground">
+              Target Port
+            </p>
+            <p class="font-medium font-mono text-xs">
+              {{ edge.targetPortNumber }}
+            </p>
+          </div>
+          <div v-if="edge.vlan">
+            <p class="text-sm text-muted-foreground">
+              VLAN
+            </p>
+            <p class="font-medium font-mono text-xs">
+              {{ edge.vlan }}
+            </p>
+          </div>
+          <div v-if="edge.speed">
+            <p class="text-sm text-muted-foreground">
+              Speed
+            </p>
+            <p class="font-medium font-mono text-xs">
+              {{ edge.speed }}
+            </p>
+          </div>
         </div>
 
         <div v-if="edge.distance">
@@ -351,6 +417,61 @@ async function handleSaveEdit() {
             <option v-for="preset in bandwidthPresets" :key="preset" :value="preset" />
           </datalist>
         </div>
+
+        <!-- Switch Detail fields (switch edges only) -->
+        <template v-if="isSwitchEdge">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-1.5">
+                Source Port Number
+              </label>
+              <input
+                v-model.number="editData.sourcePortNumber"
+                type="number"
+                min="1"
+                placeholder="e.g., 1"
+                class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1.5">
+                Target Port Number
+              </label>
+              <input
+                v-model.number="editData.targetPortNumber"
+                type="number"
+                min="1"
+                placeholder="e.g., 24"
+                class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-1.5">
+                VLAN
+              </label>
+              <input
+                v-model.number="editData.vlan"
+                type="number"
+                min="1"
+                placeholder="e.g., 10"
+                class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1.5">
+                Speed
+              </label>
+              <input
+                v-model="editData.speed"
+                type="text"
+                placeholder="e.g., 1Gbps"
+                class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+            </div>
+          </div>
+        </template>
 
         <!-- Distance -->
         <div>

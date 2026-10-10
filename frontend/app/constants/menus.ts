@@ -20,6 +20,11 @@ export const navMenu: NavMenu[] = [
         link: '/company',
       },
       {
+        title: 'Switches',
+        icon: 'i-lucide-radio-tower',
+        link: '/switch',
+      },
+      {
         title: 'Router Management',
         icon: 'i-lucide-radio',
         children: [

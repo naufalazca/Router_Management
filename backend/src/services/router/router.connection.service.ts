@@ -31,11 +31,15 @@ interface TopologyNode {
   name: string;
   ipAddress: string;
   location?: string;
-  routerType: string;
-  routerBrand: string;
+  nodeType: 'ROUTER' | 'SWITCH';
+  routerType?: string;
+  routerBrand?: string;
   status: string;
   companyId?: string;
   companyName?: string;
+  // Switch-specific fields
+  brand?: string;
+  portCount?: number;
 }
 
 interface TopologyEdge {
@@ -49,6 +53,13 @@ interface TopologyEdge {
   bandwidth?: string;
   distance?: number;
   isAutoDiscovered: boolean;
+  // Switch-connection detail
+  edgeType?: 'ROUTER' | 'SWITCH';
+  sourcePortNumber?: number;
+  targetPortNumber?: number;
+  vlan?: number;
+  speed?: string;
+  notes?: string;
 }
 
 interface TopologyData {
@@ -107,11 +118,12 @@ export class RouterConnectionService {
     });
 
     // Transform to nodes and edges for topology visualization
-    const nodes: TopologyNode[] = routers.map((router) => ({
+    const routerNodes: TopologyNode[] = routers.map((router) => ({
       id: router.id,
       name: router.name,
       ipAddress: router.ipAddress,
       location: router.location || undefined,
+      nodeType: 'ROUTER' as const,
       routerType: router.routerType,
       routerBrand: router.routerBrand,
       status: router.status,
@@ -119,7 +131,7 @@ export class RouterConnectionService {
       companyName: (router as any).company?.name
     }));
 
-    const edges: TopologyEdge[] = connections.map(conn => ({
+    const routerEdges: TopologyEdge[] = connections.map(conn => ({
       id: conn.id,
       source: conn.sourceRouterId,
       target: conn.targetRouterId,
@@ -129,8 +141,198 @@ export class RouterConnectionService {
       targetInterface: conn.targetInterface || undefined,
       bandwidth: conn.bandwidth || undefined,
       distance: conn.distance ? Number(conn.distance) : undefined,
-      isAutoDiscovered: conn.isAutoDiscovered
+      isAutoDiscovered: conn.isAutoDiscovered,
+      edgeType: 'ROUTER' as const
     }));
+
+    // ==========================================
+    // SWITCH nodes + SWITCH_CONNECTION edges
+    // ==========================================
+    // Cross-company visibility: a link is visible to a company if and only if at
+    // least one of its endpoints belongs to the company. Both endpoints of every
+    // visible link are returned as nodes ("if there's a link, show it"), so edges
+    // and nodes always stay consistent.
+    let switchNodes: TopologyNode[] = [];
+    let switchEdges: TopologyEdge[] = [];
+
+    if (companyId) {
+      // Company-owned device IDs (routers + switches)
+      const companySwitches = await prisma.switch.findMany({
+        where: { companyId },
+        select: { id: true }
+      });
+      const deviceIds = new Set<string>([
+        ...routers.map(r => r.id),
+        ...companySwitches.map(s => s.id)
+      ]);
+
+      const switchConnections = await prisma.switchConnection.findMany({
+        where: {
+          OR: [
+            { sourceSwitch: { companyId } },
+            { sourceRouter: { companyId } },
+            { targetSwitch: { companyId } },
+            { targetRouter: { companyId } }
+          ]
+        },
+        include: {
+          sourceSwitch: { include: { company: { select: { id: true, name: true } } } },
+          sourceRouter: { include: { company: { select: { id: true, name: true } } } },
+          targetSwitch: { include: { company: { select: { id: true, name: true } } } },
+          targetRouter: { include: { company: { select: { id: true, name: true } } } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      // Keep only connections that touch the company's device set; every endpoint
+      // (including foreign routers/switches) of a kept connection becomes visible.
+      const visibleSwitchConnections = switchConnections.filter((conn) => {
+        const endpointIds = [
+          conn.sourceSwitchId,
+          conn.sourceRouterId,
+          conn.targetSwitchId,
+          conn.targetRouterId
+        ].filter((v): v is string => !!v);
+        return endpointIds.some(id => deviceIds.has(id));
+      });
+
+      const foreignSwitchIds = new Set<string>();
+      const foreignRouterIds = new Set<string>();
+      for (const conn of visibleSwitchConnections) {
+        if (conn.sourceSwitchId && !deviceIds.has(conn.sourceSwitchId)) {
+          foreignSwitchIds.add(conn.sourceSwitchId);
+        }
+        if (conn.targetSwitchId && !deviceIds.has(conn.targetSwitchId)) {
+          foreignSwitchIds.add(conn.targetSwitchId);
+        }
+        if (conn.sourceRouterId && !deviceIds.has(conn.sourceRouterId)) {
+          foreignRouterIds.add(conn.sourceRouterId);
+        }
+        if (conn.targetRouterId && !deviceIds.has(conn.targetRouterId)) {
+          foreignRouterIds.add(conn.targetRouterId);
+        }
+      }
+
+      const visibleSwitchIds = new Set<string>([
+        ...companySwitches.map(s => s.id),
+        ...foreignSwitchIds
+      ]);
+
+      if (visibleSwitchIds.size > 0) {
+        const switches = await prisma.switch.findMany({
+          where: { id: { in: Array.from(visibleSwitchIds) } },
+          include: {
+            company: { select: { id: true, name: true, code: true } }
+          },
+          orderBy: { name: 'asc' }
+        });
+
+        switchNodes = switches.map(s => ({
+          id: s.id,
+          name: s.name,
+          ipAddress: s.ipAddress,
+          location: s.location || undefined,
+          nodeType: 'SWITCH' as const,
+          status: s.status,
+          brand: s.brand,
+          portCount: s.portCount || undefined,
+          companyId: s.companyId,
+          companyName: s.company?.name
+        }));
+      }
+
+      // Foreign router endpoints must also be present as nodes so their edges resolve.
+      if (foreignRouterIds.size > 0) {
+        const foreignRouters = await prisma.router.findMany({
+          where: { id: { in: Array.from(foreignRouterIds) } },
+          include: { company: { select: { id: true, name: true } } }
+        });
+
+        const foreignRouterNodes: TopologyNode[] = foreignRouters.map((router) => ({
+          id: router.id,
+          name: router.name,
+          ipAddress: router.ipAddress,
+          location: router.location || undefined,
+          nodeType: 'ROUTER' as const,
+          routerType: router.routerType,
+          routerBrand: router.routerBrand,
+          status: router.status,
+          companyId: router.companyId || undefined,
+          companyName: (router as any).company?.name
+        }));
+        switchNodes = [...switchNodes, ...foreignRouterNodes];
+      }
+
+      switchEdges = visibleSwitchConnections.map(conn => ({
+          id: conn.id,
+          source: (conn.sourceSwitchId || conn.sourceRouterId)!,
+          target: (conn.targetSwitchId || conn.targetRouterId)!,
+          linkType: conn.linkType,
+          linkStatus: conn.linkStatus,
+          sourceInterface: conn.sourceInterface || undefined,
+          targetInterface: conn.targetInterface || undefined,
+          bandwidth: conn.bandwidth || undefined,
+          distance: conn.distance ? Number(conn.distance) : undefined,
+          isAutoDiscovered: conn.isAutoDiscovered,
+          edgeType: 'SWITCH' as const,
+          sourcePortNumber: conn.sourcePortNumber || undefined,
+          targetPortNumber: conn.targetPortNumber || undefined,
+          vlan: conn.vlan || undefined,
+          speed: conn.speed || undefined,
+          notes: conn.notes || undefined
+        }));
+    } else {
+      // Global view (no company filter): all switches + all switch connections
+      const switches = await prisma.switch.findMany({
+        include: { company: { select: { id: true, name: true, code: true } } },
+        orderBy: { name: 'asc' }
+      });
+
+      const switchConnections = await prisma.switchConnection.findMany({
+        include: {
+          sourceSwitch: { include: { company: { select: { id: true, name: true } } } },
+          sourceRouter: { include: { company: { select: { id: true, name: true } } } },
+          targetSwitch: { include: { company: { select: { id: true, name: true } } } },
+          targetRouter: { include: { company: { select: { id: true, name: true } } } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      switchNodes = switches.map(s => ({
+        id: s.id,
+        name: s.name,
+        ipAddress: s.ipAddress,
+        location: s.location || undefined,
+        nodeType: 'SWITCH' as const,
+        status: s.status,
+        brand: s.brand,
+        portCount: s.portCount || undefined,
+        companyId: s.companyId,
+        companyName: s.company?.name
+      }));
+
+      switchEdges = switchConnections.map(conn => ({
+        id: conn.id,
+        source: (conn.sourceSwitchId || conn.sourceRouterId)!,
+        target: (conn.targetSwitchId || conn.targetRouterId)!,
+        linkType: conn.linkType,
+        linkStatus: conn.linkStatus,
+        sourceInterface: conn.sourceInterface || undefined,
+        targetInterface: conn.targetInterface || undefined,
+        bandwidth: conn.bandwidth || undefined,
+        distance: conn.distance ? Number(conn.distance) : undefined,
+        isAutoDiscovered: conn.isAutoDiscovered,
+        edgeType: 'SWITCH' as const,
+        sourcePortNumber: conn.sourcePortNumber || undefined,
+        targetPortNumber: conn.targetPortNumber || undefined,
+        vlan: conn.vlan || undefined,
+        speed: conn.speed || undefined,
+        notes: conn.notes || undefined
+      }));
+    }
+
+    const nodes: TopologyNode[] = [...routerNodes, ...switchNodes];
+    const edges: TopologyEdge[] = [...routerEdges, ...switchEdges];
 
     return { nodes, edges };
   }

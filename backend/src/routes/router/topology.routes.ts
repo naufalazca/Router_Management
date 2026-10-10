@@ -1,11 +1,15 @@
 import { Router } from 'express';
 import { TopologyController } from '../../controllers/topology.controller';
 import { TopologyLayoutController } from '../../controllers/topology.layout.controller';
+import { SwitchConnectionController } from '../../controllers/switch.connection.controller';
+import { SwitchTopologyLayoutController } from '../../controllers/switch.layout.controller';
 import { authenticate, requireAdmin } from '../../middleware/auth';
 
 const router = Router();
 const topologyController = new TopologyController();
 const layoutController = new TopologyLayoutController();
+const switchConnectionController = new SwitchConnectionController();
+const switchLayoutController = new SwitchTopologyLayoutController();
 
 // Apply authentication to all topology routes
 router.use(authenticate);
@@ -34,6 +38,49 @@ router.get('/connections', topologyController.getAllConnections);
 
 // POST /api/router/topology/discover/:routerId - Auto-discover connections from router
 router.post('/discover/:routerId', authenticate, requireAdmin, topologyController.discoverConnections);
+
+// ==========================================
+// SWITCH CONNECTION ROUTES
+// (declared before param routes to avoid capture)
+// ==========================================
+
+// GET /api/router/topology/switch-connections - Get all switch connections
+router.get('/switch-connections', switchConnectionController.getAll);
+
+// GET /api/router/topology/switch-connections/:id - Get switch connection by ID
+router.get('/switch-connections/:id', switchConnectionController.getById);
+
+// POST /api/router/topology/switch-connections - Create switch connection
+router.post('/switch-connections', switchConnectionController.create);
+
+// PUT /api/router/topology/switch-connections/:id - Update switch connection
+router.put('/switch-connections/:id', authenticate, requireAdmin, switchConnectionController.update);
+
+// DELETE /api/router/topology/switch-connections/:id - Delete switch connection
+router.delete('/switch-connections/:id', authenticate, requireAdmin, switchConnectionController.delete);
+
+// ==========================================
+// SWITCH TOPOLOGY LAYOUT ROUTES
+// (declared before param routes to avoid capture)
+// ==========================================
+
+// GET /api/router/topology/switch-layout - Get all switch node positions for a company
+router.get('/switch-layout', switchLayoutController.getLayout);
+
+// GET /api/router/topology/switch-layout/:switchId - Get position for a specific switch
+router.get('/switch-layout/:switchId', switchLayoutController.getSwitchPosition);
+
+// POST /api/router/topology/switch-layout - Upsert a single switch node position
+router.post('/switch-layout', switchLayoutController.upsertPosition);
+
+// POST /api/router/topology/switch-layout/bulk - Bulk upsert switch node positions
+router.post('/switch-layout/bulk', switchLayoutController.bulkUpsertPositions);
+
+// DELETE /api/router/topology/switch-layout/:switchId - Delete switch node position
+router.delete('/switch-layout/:switchId', switchLayoutController.deletePosition);
+
+// DELETE /api/router/topology/switch-layout/company/:companyId - Reset all switch positions for a company
+router.delete('/switch-layout/company/:companyId', switchLayoutController.resetCompanyLayout);
 
 // ==========================================
 // TOPOLOGY LAYOUT ROUTES

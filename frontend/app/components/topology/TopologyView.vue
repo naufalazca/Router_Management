@@ -4,7 +4,7 @@ import type { TopologyEdge, TopologyNode } from '~/stores/router/router.topology
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { ConnectionMode, MarkerType, Position, useVueFlow, VueFlow } from '@vue-flow/core'
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 import TopologyConnections from '~/components/topology/TopologyConnections.vue'
 import { useTopologyStore } from '~/stores/router/router.topology'
@@ -63,17 +63,47 @@ async function savePositions() {
 
   saveTimeout.value = setTimeout(async () => {
     const nodes = flowNodes.value
-    const positions = nodes.map(node => ({
-      routerId: node.id,
-      positionX: Math.round(node.position.x),
-      positionY: Math.round(node.position.y),
-    }))
 
-    await topologyStore.saveNodePositions({
-      positions,
-      companyId: props.companyId,
-    })
+    // Route positions to the correct layout endpoint by node type
+    const routerPositions = nodes
+      .filter(node => node.data?.nodeType !== 'SWITCH')
+      .map(node => ({
+        routerId: node.id,
+        positionX: Math.round(node.position.x),
+        positionY: Math.round(node.position.y),
+      }))
+    const switchPositions = nodes
+      .filter(node => node.data?.nodeType === 'SWITCH')
+      .map(node => ({
+        switchId: node.id,
+        positionX: Math.round(node.position.x),
+        positionY: Math.round(node.position.y),
+      }))
+
+    if (routerPositions.length > 0) {
+      await topologyStore.saveNodePositions({
+        positions: routerPositions,
+        companyId: props.companyId,
+      })
+    }
+    if (switchPositions.length > 0) {
+      await saveSwitchPositions(switchPositions)
+    }
   }, 500) // Debounce 500ms
+}
+
+// Save switch node positions via the switch-layout endpoint
+async function saveSwitchPositions(positions: Array<{ switchId: string, positionX: number, positionY: number }>) {
+  const { $apiFetch } = useApiFetch()
+  try {
+    await $apiFetch('/router/topology/switch-layout/bulk', {
+      method: 'POST',
+      body: { positions, companyId: props.companyId },
+    })
+  }
+  catch (err) {
+    console.error('Failed to save switch positions:', err)
+  }
 }
 
 // Handle node drag stop
@@ -166,6 +196,11 @@ const newConnection = ref<{
   bandwidth?: string
   distance?: number
   notes?: string
+  // Switch detail (only used when a switch endpoint is involved)
+  sourcePortNumber?: number
+  targetPortNumber?: number
+  vlan?: number
+  speed?: string
 }>({
   sourceRouterId: '',
   targetRouterId: '',
@@ -176,9 +211,22 @@ const newConnection = ref<{
   bandwidth: '',
   distance: undefined,
   notes: '',
+  sourcePortNumber: undefined,
+  targetPortNumber: undefined,
+  vlan: undefined,
+  speed: '',
 })
 
 const pendingConnection = ref<Connection | null>(null)
+
+// Whether the pending connection involves a switch endpoint
+const involvesSwitch = computed(() => {
+  if (!pendingConnection.value)
+    return false
+  const sourceNode = props.nodes.find(n => n.id === pendingConnection.value!.source)
+  const targetNode = props.nodes.find(n => n.id === pendingConnection.value!.target)
+  return sourceNode?.nodeType === 'SWITCH' || targetNode?.nodeType === 'SWITCH'
+})
 
 // Loose connection mode + click-to-connect state
 const isConnecting = ref(false)
@@ -225,6 +273,15 @@ function getNodeStyle(node: TopologyNode) {
 
 // Get node color based on status and type
 function getNodeColor(node: TopologyNode) {
+  // Switch nodes get a distinct teal look, then status overrides
+  if (node.nodeType === 'SWITCH') {
+    if (node.status === 'INACTIVE')
+      return { background: '#fee2e2', border: '#ef4444' }
+    if (node.status === 'MAINTENANCE')
+      return { background: '#fef3c7', border: '#f59e0b' }
+    return { background: '#ccfbf1', border: '#14b8a6' } // teal
+  }
+
   if (node.status === 'INACTIVE') {
     return { background: '#fee2e2', border: '#ef4444' } // red
   }
@@ -262,6 +319,9 @@ function getEdgeColor(edge: TopologyEdge): string {
     return '#ef4444'
   if (edge.linkStatus === 'PLANNED')
     return '#94a3b8'
+
+  if (edge.edgeType === 'SWITCH')
+    return '#14b8a6' // teal for switch links
 
   switch (edge.linkType) {
     case 'ETHERNET':
@@ -335,7 +395,7 @@ function handleConnect(connection: Connection) {
   )
   if (exists) {
     handleConnectEnd()
-    toast.error('Connection already exists between these routers')
+    toast.error('Connection already exists between these devices')
     return
   }
 
@@ -360,6 +420,10 @@ function handleConnect(connection: Connection) {
       bandwidth: '',
       distance: undefined,
       notes: '',
+      sourcePortNumber: undefined,
+      targetPortNumber: undefined,
+      vlan: undefined,
+      speed: '',
     }
     connectionError.value = null
     isCreateConnectionOpen.value = true
@@ -375,17 +439,44 @@ async function submitConnection() {
   connectionError.value = null
 
   try {
-    const result = await topologyStore.createConnection({
-      sourceRouterId: newConnection.value.sourceRouterId,
-      targetRouterId: newConnection.value.targetRouterId,
-      linkType: newConnection.value.linkType,
-      linkStatus: newConnection.value.linkStatus,
-      sourceInterface: newConnection.value.sourceInterface || undefined,
-      targetInterface: newConnection.value.targetInterface || undefined,
-      bandwidth: newConnection.value.bandwidth || undefined,
-      distance: newConnection.value.distance,
-      notes: newConnection.value.notes,
-    })
+    let result: { success: boolean, error?: string }
+
+    if (involvesSwitch.value) {
+      // Any connection involving a switch goes through the switch-connections API
+      const sourceNode = props.nodes.find(n => n.id === pendingConnection.value!.source)
+      const targetNode = props.nodes.find(n => n.id === pendingConnection.value!.target)
+      const endpointOf = (node?: TopologyNode) =>
+        node?.nodeType === 'SWITCH' ? { switchId: node.id } : { routerId: node!.id }
+
+      result = await topologyStore.createSwitchConnection({
+        source: endpointOf(sourceNode),
+        target: endpointOf(targetNode),
+        linkType: newConnection.value.linkType,
+        linkStatus: newConnection.value.linkStatus,
+        sourceInterface: newConnection.value.sourceInterface || undefined,
+        targetInterface: newConnection.value.targetInterface || undefined,
+        sourcePortNumber: newConnection.value.sourcePortNumber,
+        targetPortNumber: newConnection.value.targetPortNumber,
+        vlan: newConnection.value.vlan,
+        speed: newConnection.value.speed || undefined,
+        bandwidth: newConnection.value.bandwidth || undefined,
+        distance: newConnection.value.distance,
+        notes: newConnection.value.notes,
+      })
+    }
+    else {
+      result = await topologyStore.createConnection({
+        sourceRouterId: newConnection.value.sourceRouterId,
+        targetRouterId: newConnection.value.targetRouterId,
+        linkType: newConnection.value.linkType,
+        linkStatus: newConnection.value.linkStatus,
+        sourceInterface: newConnection.value.sourceInterface || undefined,
+        targetInterface: newConnection.value.targetInterface || undefined,
+        bandwidth: newConnection.value.bandwidth || undefined,
+        distance: newConnection.value.distance,
+        notes: newConnection.value.notes,
+      })
+    }
 
     if (result.success) {
       // Emit event to parent to refresh data
@@ -419,11 +510,15 @@ function getNodeName(nodeId: string): string {
   return node?.name || nodeId
 }
 
-// Delete connection
+// Delete connection (routes by edge type)
 async function handleDeleteEdge(edgeId: string) {
-  // This would call the store to delete
-  // TODO: Implement actual delete functionality
-  await topologyStore.deleteConnection(edgeId)
+  const edge = props.edges.find(e => e.id === edgeId)
+  if (edge?.edgeType === 'SWITCH') {
+    await topologyStore.deleteSwitchConnection(edgeId)
+  }
+  else {
+    await topologyStore.deleteConnection(edgeId)
+  }
   isEdgeDetailOpen.value = false
   emit('connectionCreated') // Refresh topology after delete
 }
@@ -676,6 +771,62 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
             </div>
           </div>
 
+          <!-- Switch Detail (only when a switch endpoint is involved) -->
+          <template v-if="involvesSwitch">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1.5">
+                  Source Port Number
+                </label>
+                <input
+                  v-model.number="newConnection.sourcePortNumber"
+                  type="number"
+                  min="1"
+                  placeholder="e.g., 1"
+                  class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1.5">
+                  Target Port Number
+                </label>
+                <input
+                  v-model.number="newConnection.targetPortNumber"
+                  type="number"
+                  min="1"
+                  placeholder="e.g., 24"
+                  class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1.5">
+                  VLAN
+                </label>
+                <input
+                  v-model.number="newConnection.vlan"
+                  type="number"
+                  min="1"
+                  placeholder="e.g., 10"
+                  class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1.5">
+                  Speed
+                </label>
+                <input
+                  v-model="newConnection.speed"
+                  type="text"
+                  placeholder="e.g., 1Gbps"
+                  class="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+              </div>
+            </div>
+          </template>
+
           <!-- Bandwidth -->
           <div>
             <label class="block text-sm font-medium mb-1.5">
@@ -769,7 +920,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       <div class="bg-card rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold">
-            Router Details
+            {{ selectedNode.nodeType === 'SWITCH' ? 'Switch Details' : 'Router Details' }}
           </h3>
           <button
             class="text-muted-foreground hover:text-foreground"
@@ -807,7 +958,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                 Type
               </p>
               <p class="font-medium">
-                {{ selectedNode.routerType }}
+                {{ selectedNode.nodeType === 'SWITCH' ? 'Switch' : (selectedNode.routerType || 'Router') }}
               </p>
             </div>
             <div>
@@ -824,6 +975,26 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
               >
                 {{ selectedNode.status }}
               </span>
+            </div>
+          </div>
+
+          <!-- Switch-specific fields -->
+          <div v-if="selectedNode.nodeType === 'SWITCH'" class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-sm text-muted-foreground">
+                Brand
+              </p>
+              <p class="font-medium">
+                {{ selectedNode.brand || '—' }}
+              </p>
+            </div>
+            <div>
+              <p class="text-sm text-muted-foreground">
+                Port Count
+              </p>
+              <p class="font-medium">
+                {{ selectedNode.portCount || '—' }}
+              </p>
             </div>
           </div>
 

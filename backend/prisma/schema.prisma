@@ -150,6 +150,10 @@ model Router {
   connectionsAsSource RouterConnection[] @relation("RouterConnectionsSource")
   connectionsAsTarget RouterConnection[] @relation("RouterConnectionsTarget")
 
+  // SwitchConnection Relations (router endpoint of a switch link)
+  switchConnectionsAsSource SwitchConnection[] @relation("SwitchConnectionsSourceRouter")
+  switchConnectionsAsTarget SwitchConnection[] @relation("SwitchConnectionsTargetRouter")
+
   @@map("routers")
 }
 
@@ -222,6 +226,127 @@ model TopologyLayout {
 }
 
 // ==========================================
+// SWITCH MANAGEMENT
+// ==========================================
+
+model Switch {
+  id         String       @id @default(uuid())
+  name       String
+  ipAddress  String       @map("ip_address")
+  macAddress String?      @map("mac_address")
+  model      String?
+  location   String?
+  portCount  Int?         @map("port_count")
+  status     RouterStatus @default(ACTIVE)
+  brand      RouterBrand  @default(MIKROTIK) @map("router_brand")
+
+  companyId String @map("company_id") // Switch always belongs to a company (required)
+
+  // RouterOS credentials (encrypted with AES-256-GCM)
+  username String @default("admin")
+  password String @default("") // Encrypted with AES-256-GCM
+  apiPort  Int?   @default(8728) @map("api_port")
+  sshPort  Int?   @default(22) @map("ssh_port")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  company Company @relation("CompanySwitches", fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Topology Relations
+  connectionsAsSource   SwitchConnection[]     @relation("SwitchConnectionsSourceSwitch")
+  connectionsAsTarget   SwitchConnection[]     @relation("SwitchConnectionsTargetSwitch")
+  switchTopologyLayouts SwitchTopologyLayout[]
+
+  @@index([companyId])
+  @@map("switches")
+}
+
+// ==========================================
+// SWITCH CONNECTIONS (TOPOLOGY)
+// ==========================================
+
+model SwitchConnection {
+  id String @id @default(uuid())
+
+  // Nullable endpoint FKs — exactly two populated per row (enforced by DB CHECK constraint)
+  sourceSwitchId String? @map("source_switch_id")
+  sourceRouterId String? @map("source_router_id")
+  targetSwitchId String? @map("target_switch_id")
+  targetRouterId String? @map("target_router_id")
+
+  companyId String? @map("company_id") // Owning company of the link (nullable to mirror RouterConnection)
+
+  // Connection Details
+  linkType   LinkType   @default(ETHERNET)
+  linkStatus LinkStatus @default(ACTIVE)
+
+  // Interface Information
+  sourceInterface String? @map("source_interface")
+  targetInterface String? @map("target_interface")
+
+  // Switch detail
+  sourcePortNumber Int?    @map("source_port_number")
+  targetPortNumber Int?    @map("target_port_number")
+  vlan             Int?
+  speed            String?
+
+  // Link Properties
+  bandwidth String?
+  distance  Decimal? @db.Decimal(10, 2)
+
+  // Auto-discovery flag
+  isAutoDiscovered Boolean @default(false) @map("is_auto_discovered")
+
+  // Metadata
+  notes String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  sourceSwitch Switch?  @relation("SwitchConnectionsSourceSwitch", fields: [sourceSwitchId], references: [id], onDelete: Cascade)
+  sourceRouter Router?  @relation("SwitchConnectionsSourceRouter", fields: [sourceRouterId], references: [id], onDelete: Cascade)
+  targetSwitch Switch?  @relation("SwitchConnectionsTargetSwitch", fields: [targetSwitchId], references: [id], onDelete: Cascade)
+  targetRouter Router?  @relation("SwitchConnectionsTargetRouter", fields: [targetRouterId], references: [id], onDelete: Cascade)
+  company      Company? @relation("SwitchConnectionsCompany", fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([sourceSwitchId])
+  @@index([sourceRouterId])
+  @@index([targetSwitchId])
+  @@index([targetRouterId])
+  @@index([companyId])
+  @@index([linkStatus])
+  @@map("switch_connections")
+}
+
+// ==========================================
+// SWITCH TOPOLOGY LAYOUT
+// ==========================================
+
+model SwitchTopologyLayout {
+  id        String  @id @default(uuid())
+  switchId  String  @map("switch_id")
+  companyId String? @map("company_id") // Null = global layout
+
+  // Node position in topology view
+  positionX Decimal @map("position_x") @db.Decimal(10, 2)
+  positionY Decimal @map("position_y") @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  switch  Switch   @relation(fields: [switchId], references: [id], onDelete: Cascade)
+  company Company? @relation("SwitchTopologyLayoutCompany", fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, switchId])
+  @@index([companyId])
+  @@map("switch_topology_layouts")
+}
+
+// ==========================================
 // COMPANY MANAGEMENT
 // ==========================================
 
@@ -237,10 +362,13 @@ model Company {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  routers         Router[]
-  connections     RouterConnection[] @relation("RouterConnectionsCompany")
-  backupSchedules BackupSchedule[]
-  topologyLayouts TopologyLayout[] @relation("TopologyLayoutCompany")
+  routers               Router[]
+  connections           RouterConnection[]     @relation("RouterConnectionsCompany")
+  backupSchedules       BackupSchedule[]
+  topologyLayouts       TopologyLayout[]       @relation("TopologyLayoutCompany")
+  switches              Switch[]               @relation("CompanySwitches")
+  switchConnections     SwitchConnection[]     @relation("SwitchConnectionsCompany")
+  switchTopologyLayouts SwitchTopologyLayout[] @relation("SwitchTopologyLayoutCompany")
 
   @@map("companies")
 }

@@ -4,18 +4,24 @@ import { computed, ref } from 'vue'
 import { useApiFetch } from '@/composables/useApiFetch'
 
 // Types
+export type TopologyNodeType = 'ROUTER' | 'SWITCH'
+
 export interface TopologyNode {
   id: string
   name: string
   ipAddress: string
   location?: string
-  routerType: 'UPSTREAM' | 'CORE' | 'DISTRIBUSI' | 'WIRELESS'
-  routerBrand: 'MIKROTIK' | 'UBIVIQUITI'
+  nodeType: TopologyNodeType
+  routerType?: 'UPSTREAM' | 'CORE' | 'DISTRIBUSI' | 'WIRELESS'
+  routerBrand?: 'MIKROTIK' | 'UBIVIQUITI'
   status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE'
   companyId?: string
   companyName?: string
   positionX?: number
   positionY?: number
+  // Switch-specific fields
+  brand?: 'MIKROTIK' | 'UBIVIQUITI'
+  portCount?: number
 }
 
 export interface TopologyEdge {
@@ -29,6 +35,12 @@ export interface TopologyEdge {
   bandwidth?: string
   distance?: number
   isAutoDiscovered: boolean
+  edgeType?: TopologyNodeType
+  sourcePortNumber?: number
+  targetPortNumber?: number
+  vlan?: number
+  speed?: string
+  notes?: string
 }
 
 export interface TopologyData {
@@ -309,6 +321,139 @@ export const useTopologyStore = defineStore('topology', () => {
     }
   }
 
+  // ==========================================
+  // SWITCH CONNECTION FUNCTIONS
+  // ==========================================
+
+  // Create new switch connection (router-router is handled by createConnection)
+  async function createSwitchConnection(data: {
+    source: { switchId?: string, routerId?: string }
+    target: { switchId?: string, routerId?: string }
+    linkType?: 'ETHERNET' | 'FIBER' | 'WIRELESS' | 'VPN'
+    linkStatus?: 'ACTIVE' | 'INACTIVE' | 'PLANNED'
+    sourceInterface?: string
+    targetInterface?: string
+    sourcePortNumber?: number
+    targetPortNumber?: number
+    vlan?: number
+    speed?: string
+    bandwidth?: string
+    distance?: number
+    notes?: string
+  }) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const response = await $apiFetch<{
+        status: string
+        message: string
+        data: unknown
+      }>(`/router/topology/switch-connections`, {
+        method: 'POST',
+        body: data,
+      })
+
+      if (response && response.status === 'success') {
+        await fetchTopology()
+        await fetchConnections()
+        return { success: true, data: response.data }
+      }
+      else {
+        throw new Error(response?.message || 'Failed to create switch connection')
+      }
+    }
+    catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to create switch connection'
+      error.value = errorMsg
+      return { success: false, error: errorMsg }
+    }
+    finally {
+      isLoading.value = false
+    }
+  }
+
+  // Update switch connection
+  async function updateSwitchConnection(
+    id: string,
+    data: Partial<{
+      linkType: 'ETHERNET' | 'FIBER' | 'WIRELESS' | 'VPN'
+      linkStatus: 'ACTIVE' | 'INACTIVE' | 'PLANNED'
+      sourceInterface: string
+      targetInterface: string
+      sourcePortNumber: number
+      targetPortNumber: number
+      vlan: number
+      speed: string
+      bandwidth: string
+      distance: number
+      notes: string
+    }>,
+  ) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const response = await $apiFetch<{
+        status: string
+        message: string
+        data: unknown
+      }>(`/router/topology/switch-connections/${id}`, {
+        method: 'PUT',
+        body: data,
+      })
+
+      if (response && response.status === 'success') {
+        await fetchTopology()
+        await fetchConnections()
+        return { success: true, data: response.data }
+      }
+      else {
+        throw new Error(response?.message || 'Failed to update switch connection')
+      }
+    }
+    catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to update switch connection'
+      error.value = errorMsg
+      return { success: false, error: errorMsg }
+    }
+    finally {
+      isLoading.value = false
+    }
+  }
+
+  // Delete switch connection
+  async function deleteSwitchConnection(id: string) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const response = await $apiFetch<{
+        status: string
+        message: string
+      }>(`/router/topology/switch-connections/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (response && response.status === 'success') {
+        await fetchTopology()
+        await fetchConnections()
+        return { success: true }
+      }
+      else {
+        throw new Error(response?.message || 'Failed to delete switch connection')
+      }
+    }
+    catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to delete switch connection'
+      error.value = errorMsg
+      return { success: false, error: errorMsg }
+    }
+    finally {
+      isLoading.value = false
+    }
+  }
+
   // Clear error
   function clearError() {
     error.value = null
@@ -326,10 +471,13 @@ export const useTopologyStore = defineStore('topology', () => {
 
   const layoutPositions = ref<Map<string, { x: number, y: number }>>(new Map())
 
-  // Fetch layout positions for a company
+  // Fetch layout positions for a company (routers + switches merged into one map;
+  // router and switch IDs are disjoint so a single map is safe)
   async function fetchLayoutPositions(companyId?: string) {
+    const map = new Map<string, { x: number, y: number }>()
+    const query = companyId ? `?companyId=${companyId}` : ''
+
     try {
-      const query = companyId ? `?companyId=${companyId}` : ''
       const response = await $apiFetch<{
         status: string
         data: Array<{
@@ -341,19 +489,37 @@ export const useTopologyStore = defineStore('topology', () => {
       }>(`/router/topology/layout${query}`)
 
       if (response && response.status === 'success') {
-        // Build map of positions
-        const map = new Map<string, { x: number, y: number }>()
         response.data.forEach((pos) => {
           map.set(pos.routerId, { x: Number(pos.positionX), y: Number(pos.positionY) })
         })
-        layoutPositions.value = map
-        return map
       }
     }
     catch (err) {
-      console.error('Failed to fetch layout positions:', err)
+      console.error('Failed to fetch router layout positions:', err)
     }
-    return new Map()
+
+    try {
+      const response = await $apiFetch<{
+        status: string
+        data: Array<{
+          switchId: string
+          positionX: number
+          positionY: number
+        }>
+      }>(`/router/topology/switch-layout${query}`)
+
+      if (response && response.status === 'success') {
+        response.data.forEach((pos) => {
+          map.set(pos.switchId, { x: Number(pos.positionX), y: Number(pos.positionY) })
+        })
+      }
+    }
+    catch (err) {
+      console.error('Failed to fetch switch layout positions:', err)
+    }
+
+    layoutPositions.value = map
+    return map
   }
 
   // Save a single node position
@@ -445,6 +611,9 @@ export const useTopologyStore = defineStore('topology', () => {
     createConnection,
     updateConnection,
     deleteConnection,
+    createSwitchConnection,
+    updateSwitchConnection,
+    deleteSwitchConnection,
     getNodeById,
     getEdgesForNode,
     getConnectedNodes,

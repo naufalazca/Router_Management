@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { routerOSBackupService } from '../../services/routeros/routeros.backup.service';
+import { routerOSGlobalBackupService } from '../../services/routeros/routeros.global.backup.service';
 import {
   triggerBackupSchema,
   restoreBackupSchema,
@@ -14,7 +14,7 @@ import { TriggerType } from '@prisma/client';
  * Handles HTTP requests for backup management
  */
 
-export class RouterOSBackupController {
+export class RouterOSGlobalBackupController {
   /**
    * POST /api/routeros/backup/:routerId/trigger
    * Trigger manual backup for a router
@@ -25,7 +25,7 @@ export class RouterOSBackupController {
       const validatedData = triggerBackupSchema.parse(req.body);
       const userId = (req as any).user?.userId; // From auth middleware
 
-      const backup = await routerOSBackupService.createBackup({
+      const backup = await routerOSGlobalBackupService.createBackup({
         routerId: routerId,
         triggeredBy: userId,
         triggerType: TriggerType.MANUAL,
@@ -57,7 +57,7 @@ export class RouterOSBackupController {
     try {
       const validatedQuery = listBackupsSchema.parse(req.query);
 
-      const result = await routerOSBackupService.getBackups({
+      const result = await routerOSGlobalBackupService.getBackups({
         routerId: validatedQuery.routerId,
         companyId: validatedQuery.companyId,
         status: validatedQuery.status,
@@ -95,7 +95,7 @@ export class RouterOSBackupController {
     try {
       const { id } = req.params;
 
-      const backup = await routerOSBackupService.getBackupById(id);
+      const backup = await routerOSGlobalBackupService.getBackupById(id);
 
       // Convert BigInt fields to strings for JSON serialization
       const serializedBackup = {
@@ -121,7 +121,7 @@ export class RouterOSBackupController {
       const { id } = req.params;
       const validatedQuery = downloadUrlSchema.parse(req.query);
 
-      const url = await routerOSBackupService.getBackupDownloadUrl(
+      const url = await routerOSGlobalBackupService.getBackupDownloadUrl(
         id,
         validatedQuery.expiresIn
       );
@@ -148,7 +148,7 @@ export class RouterOSBackupController {
       const validatedData = restoreBackupSchema.parse(req.body);
       const userId = (req as any).user?.userId;
 
-      const restore = await routerOSBackupService.restoreBackup({
+      const restore = await routerOSGlobalBackupService.restoreBackup({
         backupId: id,
         routerId: validatedData.routerId,
         restoredBy: userId,
@@ -182,7 +182,7 @@ export class RouterOSBackupController {
     try {
       const { id } = req.params;
 
-      const history = await routerOSBackupService.getRestoreHistory(id);
+      const history = await routerOSGlobalBackupService.getRestoreHistory(id);
 
       res.json({
         success: true,
@@ -203,7 +203,7 @@ export class RouterOSBackupController {
       const validatedData = pinBackupSchema.parse(req.body);
       const userId = (req as any).user?.userId;
 
-      const backup = await routerOSBackupService.togglePin(
+      const backup = await routerOSGlobalBackupService.togglePin(
         id,
         userId,
         validatedData.reason
@@ -233,7 +233,7 @@ export class RouterOSBackupController {
     try {
       const { id } = req.params;
 
-      await routerOSBackupService.deleteBackup(id);
+      await routerOSGlobalBackupService.deleteBackup(id);
 
       res.json({
         success: true,
@@ -246,4 +246,4 @@ export class RouterOSBackupController {
 }
 
 // Export singleton instance
-export const routerOSBackupController = new RouterOSBackupController();
+export const routerOSGlobalBackupController = new RouterOSGlobalBackupController();

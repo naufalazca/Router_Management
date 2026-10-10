@@ -50,7 +50,8 @@ export interface ConfigSummary {
 
 export interface RouterBackup {
   id: string
-  routerId: string
+  routerId: string | null
+  switchId: string | null
   backupType: BackupType
   storageKey: string
   storageUrl: string | null
@@ -78,13 +79,23 @@ export interface RouterBackup {
       name: string
     }
   }
+  switch?: {
+    id: string
+    name: string
+    ipAddress: string
+    company?: {
+      id: string
+      name: string
+    }
+  }
   restoreHistory?: BackupRestore[]
 }
 
 export interface BackupRestore {
   id: string
   backupId: string
-  routerId: string
+  routerId: string | null
+  switchId: string | null
   restoreStatus: RestoreStatus
   restoredBy: string
   restoreType: RestoreType
@@ -95,6 +106,11 @@ export interface BackupRestore {
   completedAt: string | null
   backup?: RouterBackup
   router?: {
+    id: string
+    name: string
+    ipAddress: string
+  }
+  switch?: {
     id: string
     name: string
     ipAddress: string
@@ -141,6 +157,8 @@ export interface TriggerBackupResponse {
 
 export interface ListBackupsQuery {
   routerId?: string
+  switchId?: string
+  deviceId?: string
   companyId?: string
   status?: BackupStatus
   isPinned?: boolean
@@ -208,6 +226,8 @@ export interface GetRestoreHistoryResponse {
 
 export interface BackupFilters {
   routerId?: string
+  switchId?: string
+  deviceId?: string
   companyId?: string
   status?: BackupStatus | null
   isPinned?: boolean | null

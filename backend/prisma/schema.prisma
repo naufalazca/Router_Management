@@ -140,9 +140,9 @@ model Router {
   updatedAt   DateTime     @updatedAt @map("updated_at")
 
   company         Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  backups         RouterBackup[]
+  backups         RouterBackup[]  @relation("RouterBackups")
   backupSchedules BackupSchedule[]
-  restoreHistory  BackupRestore[]
+  restoreHistory  BackupRestore[] @relation("RouterRestores")
   tasks           Task[] // Kanban tasks linked to this router
   topologyLayouts TopologyLayout[] // Topology positions for this router
 
@@ -253,6 +253,10 @@ model Switch {
 
   // Relations
   company Company @relation("CompanySwitches", fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Backup Relations
+  backups        RouterBackup[]  @relation("SwitchBackups")
+  restoreHistory BackupRestore[] @relation("SwitchRestores")
 
   // Topology Relations
   connectionsAsSource   SwitchConnection[]     @relation("SwitchConnectionsSourceSwitch")
@@ -405,7 +409,8 @@ model User {
 
 model RouterBackup {
   id         String     @id @default(uuid())
-  routerId   String     @map("router_id")
+  routerId   String?    @map("router_id")
+  switchId   String?    @map("switch_id") // Exactly one of routerId/switchId is set
   backupType BackupType @default(EXPORT) @map("backup_type")
 
   // R2 Storage Information
@@ -438,10 +443,12 @@ model RouterBackup {
   expiresAt   DateTime? @map("expires_at") // For retention policy (null if pinned)
 
   // Relations
-  router         Router          @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  router         Router?         @relation("RouterBackups", fields: [routerId], references: [id], onDelete: Cascade)
+  switch         Switch?         @relation("SwitchBackups", fields: [switchId], references: [id], onDelete: Cascade)
   restoreHistory BackupRestore[]
 
   @@index([routerId, createdAt])
+  @@index([switchId, createdAt])
   @@index([backupStatus])
   @@index([expiresAt])
   @@index([isPinned])
@@ -482,7 +489,8 @@ model BackupSchedule {
 model BackupRestore {
   id       String @id @default(uuid())
   backupId String @map("backup_id")
-  routerId String @map("router_id")
+  routerId String? @map("router_id")
+  switchId String? @map("switch_id") // Exactly one of routerId/switchId is set
 
   // Restore Information
   restoreStatus RestoreStatus @default(PENDING) @map("restore_status")
@@ -502,10 +510,12 @@ model BackupRestore {
 
   // Relations
   backup RouterBackup @relation(fields: [backupId], references: [id], onDelete: Cascade)
-  router Router       @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  router Router?      @relation("RouterRestores", fields: [routerId], references: [id], onDelete: Cascade)
+  switch Switch?      @relation("SwitchRestores", fields: [switchId], references: [id], onDelete: Cascade)
 
   @@index([backupId])
   @@index([routerId])
+  @@index([switchId])
   @@index([createdAt])
   @@map("backup_restores")
 }

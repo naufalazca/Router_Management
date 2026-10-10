@@ -1,60 +1,31 @@
 /**
- * RouterOS User Management Service
- * Handles user-related operations on MikroTik routers
+ * RouterOS User Management Service (device-agnostic)
+ * Handles user-related operations on any RouterOS device (Router or Switch)
  */
 
-import { prisma } from '../../lib/prisma';
-import { decrypt } from '../../lib/encryption';
 import { RouterOSClient } from '../../lib/routeros/client';
 import { USER_COMMANDS } from '../../lib/routeros/constants';
+import { resolveDevice, assertDeviceActive } from '../../lib/routeros/resolve-device';
 import type {
-  RouterOSConfig,
   RouterOSUser,
   ParsedRouterUser,
   RouterOSUserParams,
 } from '../../lib/routeros/types';
 
-export class RouterOSUserService {
+export class RouterOSGlobalUserService {
   /**
-   * Get router credentials from database and create client
+   * Resolve device credentials and create an API client
    */
-  private async getRouterClient(routerId: string): Promise<RouterOSClient> {
-    const router = await prisma.router.findUnique({
-      where: { id: routerId },
-      select: {
-        ipAddress: true,
-        username: true,
-        password: true,
-        apiPort: true,
-        status: true,
-      },
+  private async getDeviceClient(deviceId: string): Promise<RouterOSClient> {
+    const device = await resolveDevice(deviceId);
+    assertDeviceActive(device);
+
+    const client = new RouterOSClient({
+      host: device.ipAddress,
+      port: device.apiPort,
+      username: device.username,
+      password: device.password,
     });
-
-    if (!router) {
-      throw new Error(`Router with ID ${routerId} not found`);
-    }
-
-    if (router.status !== 'ACTIVE') {
-      throw new Error(`Router is not active (status: ${router.status})`);
-    }
-
-    // Decrypt password
-    let decryptedPassword: string;
-    try {
-      decryptedPassword = decrypt(router.password);
-    } catch (error) {
-      console.error('Failed to decrypt router password:', error);
-      throw new Error('Failed to decrypt router password. The password may be corrupted or encryption key is incorrect.');
-    }
-
-    const config: RouterOSConfig = {
-      host: router.ipAddress,
-      port: router.apiPort || 8728,
-      username: router.username,
-      password: decryptedPassword,
-    };
-
-    const client = new RouterOSClient(config);
     await client.connect();
 
     return client;
@@ -82,7 +53,7 @@ export class RouterOSUserService {
     let client: RouterOSClient | null = null;
 
     try {
-      client = await this.getRouterClient(routerId);
+      client = await this.getDeviceClient(routerId);
 
       const result = await client.executeWithRetry(USER_COMMANDS.PRINT);
 
@@ -106,7 +77,7 @@ export class RouterOSUserService {
     let client: RouterOSClient | null = null;
 
     try {
-      client = await this.getRouterClient(routerId);
+      client = await this.getDeviceClient(routerId);
 
       const result = await client.executeWithRetry(USER_COMMANDS.PRINT, {
         '?name': username,
@@ -136,7 +107,7 @@ export class RouterOSUserService {
         throw new Error('Username and password are required');
       }
 
-      client = await this.getRouterClient(routerId);
+      client = await this.getDeviceClient(routerId);
 
       // Build command parameters
       const cmdParams: Record<string, any> = {
@@ -180,7 +151,7 @@ export class RouterOSUserService {
     let client: RouterOSClient | null = null;
 
     try {
-      client = await this.getRouterClient(routerId);
+      client = await this.getDeviceClient(routerId);
 
       // Build command parameters
       const cmdParams: Record<string, any> = {
@@ -224,7 +195,7 @@ export class RouterOSUserService {
     let client: RouterOSClient | null = null;
 
     try {
-      client = await this.getRouterClient(routerId);
+      client = await this.getDeviceClient(routerId);
 
       const result = await client.executeWithRetry(USER_COMMANDS.REMOVE, {
         '.id': userId,
@@ -256,4 +227,4 @@ export class RouterOSUserService {
 }
 
 // Export singleton instance
-export const routerOSUserService = new RouterOSUserService();
+export const routerOSGlobalUserService = new RouterOSGlobalUserService();

@@ -5,10 +5,10 @@ import userRoutes from './user.routes';
 import companyRoutes from './company.routes';
 import switchRoutes from './switch.routes';
 import topologyRoutes from './router/topology.routes';
-import routerosUserRoutes from './routeros/routeros.user.routes';
-import routerosBackupRoutes from './routeros/routeros.backup.routes';
-import routerosRoutingRoutes from './routeros/routeros.routing.routes';
-import routerosTroubleshootRoutes from './routeros/routeros.troubleshoot.routes';
+import routerosUserRoutes from './routeros/routeros.global.user.routes';
+import routerosBackupRoutes from './routeros/routeros.global.backup.routes';
+import routerosRoutingRoutes from './routeros/routeros.router.routing.routes';
+import routerosTroubleshootRoutes from './routeros/routeros.global.troubleshoot.routes';
 import kanbanRoutes from './kanban/kanban.routes';
 import ipinfoRoutes from './ipinfo.routes';
 

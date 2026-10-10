@@ -77,30 +77,30 @@ function formatFileSize(bytes: number) {
 
         <Separator />
 
-        <!-- Router Info -->
+        <!-- Device Info -->
         <div class="space-y-2">
           <h4 class="font-semibold">
-            Router Information
+            Device Information
           </h4>
           <div class="grid grid-cols-2 gap-2 text-sm">
             <div class="text-muted-foreground">
               Name:
             </div>
             <div class="font-medium">
-              {{ backup.router?.name || 'N/A' }}
+              {{ backup.router?.name || backup.switch?.name || 'N/A' }}
             </div>
 
             <div class="text-muted-foreground">
               IP Address:
             </div>
             <div class="font-mono">
-              {{ backup.router?.ipAddress || 'N/A' }}
+              {{ backup.router?.ipAddress || backup.switch?.ipAddress || 'N/A' }}
             </div>
 
             <div class="text-muted-foreground">
               Company:
             </div>
-            <div>{{ backup.router?.company?.name || 'N/A' }}</div>
+            <div>{{ backup.router?.company?.name || backup.switch?.company?.name || 'N/A' }}</div>
           </div>
         </div>
 

@@ -1,12 +1,11 @@
 /**
- * RouterOS Troubleshoot Service
- * Handles ping and traceroute operations via SSH
+ * RouterOS Troubleshoot Service (device-agnostic)
+ * Handles ping and traceroute operations via SSH on any RouterOS device (Router or Switch)
  */
 
-import { prisma } from '../../lib/prisma';
-import { decrypt } from '../../lib/encryption';
 import { RouterOSSSHClient, type SSHConfig } from '../../lib/routeros/ssh-client';
 import { TROUBLESHOOT_DEFAULTS } from '../../lib/routeros/constants';
+import { resolveDevice, assertDeviceActive } from '../../lib/routeros/resolve-device';
 
 /**
  * Ping result interface
@@ -83,44 +82,19 @@ export interface TracerouteParams {
   count?: number;
 }
 
-export class RouterOSTroubleshootService {
+export class RouterOSGlobalTroubleshootService {
   /**
-   * Get router SSH client from database credentials
+   * Get device SSH client from resolved credentials
    */
-  private async getRouterSSHClient(routerId: string): Promise<RouterOSSSHClient> {
-    const router = await prisma.router.findUnique({
-      where: { id: routerId },
-      select: {
-        ipAddress: true,
-        username: true,
-        password: true,
-        sshPort: true,
-        status: true,
-      },
-    });
-
-    if (!router) {
-      throw new Error(`Router with ID ${routerId} not found`);
-    }
-
-    if (router.status !== 'ACTIVE') {
-      throw new Error(`Router is not active (status: ${router.status})`);
-    }
-
-    // Decrypt password
-    let decryptedPassword: string;
-    try {
-      decryptedPassword = decrypt(router.password);
-    } catch (error) {
-      console.error('Failed to decrypt router password:', error);
-      throw new Error('Failed to decrypt router password. The password may be corrupted or encryption key is incorrect.');
-    }
+  private async getDeviceSSHClient(deviceId: string): Promise<RouterOSSSHClient> {
+    const device = await resolveDevice(deviceId);
+    assertDeviceActive(device);
 
     const config: SSHConfig = {
-      host: router.ipAddress,
-      port: router.sshPort ?? 22,
-      username: router.username,
-      password: decryptedPassword,
+      host: device.ipAddress,
+      port: device.sshPort,
+      username: device.username,
+      password: device.password,
       timeout: 30000,
     };
 
@@ -349,7 +323,7 @@ export class RouterOSTroubleshootService {
         throw new Error('Target address is required for ping');
       }
 
-      client = await this.getRouterSSHClient(routerId);
+      client = await this.getDeviceSSHClient(routerId);
 
       // Build ping command
       const count = params.count || TROUBLESHOOT_DEFAULTS.PING.COUNT;
@@ -405,7 +379,7 @@ export class RouterOSTroubleshootService {
         throw new Error('Target address is required for traceroute');
       }
 
-      client = await this.getRouterSSHClient(routerId);
+      client = await this.getDeviceSSHClient(routerId);
 
       // Build traceroute command (simple format with count only)
       const count = params.count || TROUBLESHOOT_DEFAULTS.TRACEROUTE.COUNT;
@@ -449,4 +423,4 @@ export class RouterOSTroubleshootService {
 }
 
 // Export singleton instance
-export const routerOSTroubleshootService = new RouterOSTroubleshootService();
+export const routerOSGlobalTroubleshootService = new RouterOSGlobalTroubleshootService();

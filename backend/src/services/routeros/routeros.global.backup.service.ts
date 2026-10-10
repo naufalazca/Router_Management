@@ -1,7 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { createRouterOSClient } from '../../lib/routeros/client';
 import { createSSHClient } from '../../lib/routeros/ssh-client';
-import { decrypt } from '../../lib/encryption';
 import {
   uploadBackup,
   generateBackupStorageKey,
@@ -11,15 +10,18 @@ import {
   downloadAndVerifyBackup,
   deleteBackup
 } from '../../lib/backup-storage';
-import { BackupType, BackupStatus, TriggerType, RouterStatus } from '@prisma/client';
+import { BackupType, BackupStatus, TriggerType } from '@prisma/client';
+import { resolveDevice, assertDeviceActive } from '../../lib/routeros/resolve-device';
 
 /**
- * RouterOS Backup Service
- * Handles backup creation, restoration, and management
+ * RouterOS Backup Service (device-agnostic)
+ * Handles backup creation, restoration, and management for any RouterOS
+ * device (Router or Switch). Each backup row has exactly one owner:
+ * either routerId or switchId.
  */
 
 export interface CreateBackupOptions {
-  routerId: string;
+  routerId: string; // Device id (router or switch)
   triggeredBy?: string; // User ID for manual backups
   triggerType?: TriggerType;
   backupType?: BackupType;
@@ -33,39 +35,31 @@ export interface RestoreBackupOptions {
   createSafetyBackup?: boolean;
 }
 
-export class RouterOSBackupService {
+export class RouterOSGlobalBackupService {
   /**
-   * Create a new backup for a router
+   * Create a new backup for a device (router or switch)
    */
   async createBackup(options: CreateBackupOptions) {
     const {
-      routerId,
+      routerId: deviceId,
       triggeredBy,
       triggerType = TriggerType.MANUAL,
       backupType = BackupType.EXPORT,
       compact = false
     } = options;
 
-    // 1. Get router from database
-    const router = await prisma.router.findUnique({
-      where: { id: routerId }
-    });
+    // 1. Resolve device (switch first, then router)
+    const device = await resolveDevice(deviceId);
+    assertDeviceActive(device);
 
-    if (!router) {
-      throw new Error(`Router not found: ${routerId}`);
-    }
+    // 2. Generate storage key (deviceId is unique across both tables)
+    const storageKey = generateBackupStorageKey(deviceId, backupType);
 
-    if (router.status !== RouterStatus.ACTIVE) {
-      throw new Error(`Router is not active: ${router.status}`);
-    }
-
-    // 2. Generate storage key
-    const storageKey = generateBackupStorageKey(routerId, backupType);
-
-    // 3. Create backup record with PENDING status
+    // 3. Create backup record with PENDING status — exactly one owner set
     const backup = await prisma.routerBackup.create({
       data: {
-        routerId,
+        routerId: device.deviceType === 'router' ? deviceId : null,
+        switchId: device.deviceType === 'switch' ? deviceId : null,
         backupType,
         storageKey,
         fileSize: 0, // Will be updated after upload
@@ -79,17 +73,15 @@ export class RouterOSBackupService {
 
     try {
       // 4. Connect to RouterOS via SSH for export and API for version
-      const decryptedPassword = decrypt(router.password);
-
       let configContent: string;
       let routerVersion: string;
 
       // Use SSH for export (RouterOS API doesn't support export)
       const sshClient = await createSSHClient({
-        host: router.ipAddress,
-        port: router.sshPort || 22,
-        username: router.username,
-        password: decryptedPassword,
+        host: device.ipAddress,
+        port: device.sshPort,
+        username: device.username,
+        password: device.password,
         timeout: 30000
       });
 
@@ -101,10 +93,10 @@ export class RouterOSBackupService {
 
       // Use API to get RouterOS version
       const apiClient = await createRouterOSClient({
-        host: router.ipAddress,
-        username: router.username,
-        password: decryptedPassword,
-        port: router.apiPort || 8728
+        host: device.ipAddress,
+        username: device.username,
+        password: device.password,
+        port: device.apiPort
       });
 
       try {
@@ -140,21 +132,30 @@ export class RouterOSBackupService {
           completedAt: new Date()
         },
         include: {
-          router: {
+          router: device.deviceType === 'router' ? {
             select: {
               id: true,
               name: true,
               ipAddress: true
             }
-          }
+          } : undefined,
+          switch: device.deviceType === 'switch' ? {
+            select: {
+              id: true,
+              name: true,
+              ipAddress: true
+            }
+          } : undefined
         }
       });
 
-      // 9. Update router lastSeen
-      await prisma.router.update({
-        where: { id: routerId },
-        data: { lastSeen: new Date() }
-      });
+      // 9. Update device lastSeen (routers only; switches have no lastSeen field)
+      if (device.deviceType === 'router') {
+        await prisma.router.update({
+          where: { id: deviceId },
+          data: { lastSeen: new Date() }
+        });
+      }
 
       return updatedBackup;
     } catch (error) {
@@ -175,9 +176,9 @@ export class RouterOSBackupService {
   /**
    * Create safety backup before restore operation
    */
-  async createSafetyBackup(routerId: string, restoredBy: string) {
+  async createSafetyBackup(deviceId: string, restoredBy: string) {
     return await this.createBackup({
-      routerId,
+      routerId: deviceId,
       triggeredBy: restoredBy,
       triggerType: TriggerType.MANUAL,
       compact: true // Safety backups are compact
@@ -196,7 +197,7 @@ export class RouterOSBackupService {
   async restoreBackup(options: RestoreBackupOptions) {
     const {
       backupId,
-      routerId,
+      routerId: deviceId,
       restoredBy,
       createSafetyBackup: shouldCreateSafetyBackup = true
     } = options;
@@ -204,7 +205,7 @@ export class RouterOSBackupService {
     // 1. Get backup record
     const backup = await prisma.routerBackup.findUnique({
       where: { id: backupId },
-      include: { router: true }
+      include: { router: true, switch: true }
     });
 
     if (!backup) {
@@ -215,24 +216,15 @@ export class RouterOSBackupService {
       throw new Error(`Backup is not completed: ${backup.backupStatus}`);
     }
 
-    // 2. Get target router
-    const router = await prisma.router.findUnique({
-      where: { id: routerId }
-    });
-
-    if (!router) {
-      throw new Error(`Router not found: ${routerId}`);
-    }
-
-    if (router.status !== RouterStatus.ACTIVE) {
-      throw new Error(`Router is not active: ${router.status}`);
-    }
+    // 2. Resolve target device (switch first, then router)
+    const device = await resolveDevice(deviceId);
+    assertDeviceActive(device);
 
     // 3. Create safety backup if requested
     let safetyBackup = null;
     if (shouldCreateSafetyBackup) {
       try {
-        safetyBackup = await this.createSafetyBackup(routerId, restoredBy);
+        safetyBackup = await this.createSafetyBackup(deviceId, restoredBy);
       } catch (error) {
         console.error('Failed to create safety backup:', error);
         // Continue with restore even if safety backup fails
@@ -243,11 +235,12 @@ export class RouterOSBackupService {
       }
     }
 
-    // 4. Create restore record
+    // 4. Create restore record — exactly one owner set
     const restore = await prisma.backupRestore.create({
       data: {
         backupId,
-        routerId,
+        routerId: device.deviceType === 'router' ? deviceId : null,
+        switchId: device.deviceType === 'switch' ? deviceId : null,
         restoredBy,
         safetyBackupId: safetyBackup?.id || null
       }
@@ -261,12 +254,11 @@ export class RouterOSBackupService {
       );
 
       // 6. Connect to RouterOS
-      const decryptedPassword = decrypt(router.password);
       const client = await createRouterOSClient({
-        host: router.ipAddress,
-        username: router.username,
-        password: decryptedPassword,
-        port: router.apiPort || 8728
+        host: device.ipAddress,
+        username: device.username,
+        password: device.password,
+        port: device.apiPort
       });
 
       let restoreLog: string;
@@ -294,13 +286,20 @@ export class RouterOSBackupService {
         },
         include: {
           backup: true,
-          router: {
+          router: device.deviceType === 'router' ? {
             select: {
               id: true,
               name: true,
               ipAddress: true
             }
-          }
+          } : undefined,
+          switch: device.deviceType === 'switch' ? {
+            select: {
+              id: true,
+              name: true,
+              ipAddress: true
+            }
+          } : undefined
         }
       });
 
@@ -327,24 +326,35 @@ export class RouterOSBackupService {
    */
   async getBackups(filters: {
     routerId?: string;
+    switchId?: string;
+    deviceId?: string; // Matches either owner
     companyId?: string;
     status?: BackupStatus;
     isPinned?: boolean;
     limit?: number;
     offset?: number;
   }) {
-    const { routerId, companyId, status, isPinned, limit = 50, offset = 0 } = filters;
+    const { routerId, switchId, deviceId, companyId, status, isPinned, limit = 50, offset = 0 } = filters;
 
     const where: any = {};
 
-    if (routerId) {
-      where.routerId = routerId;
+    if (deviceId) {
+      where.OR = [{ routerId: deviceId }, { switchId: deviceId }];
+    } else {
+      if (routerId) {
+        where.routerId = routerId;
+      }
+      if (switchId) {
+        where.switchId = switchId;
+      }
     }
 
     if (companyId) {
-      where.router = {
-        companyId
-      };
+      where.OR = [
+        ...(where.OR || []),
+        { router: { companyId } },
+        { switch: { companyId } }
+      ];
     }
 
     if (status) {
@@ -360,6 +370,19 @@ export class RouterOSBackupService {
         where,
         include: {
           router: {
+            select: {
+              id: true,
+              name: true,
+              ipAddress: true,
+              company: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          },
+          switch: {
             select: {
               id: true,
               name: true,
@@ -396,6 +419,19 @@ export class RouterOSBackupService {
       where: { id: backupId },
       include: {
         router: {
+          select: {
+            id: true,
+            name: true,
+            ipAddress: true,
+            company: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        },
+        switch: {
           select: {
             id: true,
             name: true,
@@ -519,6 +555,13 @@ export class RouterOSBackupService {
             name: true,
             ipAddress: true
           }
+        },
+        switch: {
+          select: {
+            id: true,
+            name: true,
+            ipAddress: true
+          }
         }
       }
     });
@@ -526,4 +569,4 @@ export class RouterOSBackupService {
 }
 
 // Export singleton instance
-export const routerOSBackupService = new RouterOSBackupService();
+export const routerOSGlobalBackupService = new RouterOSGlobalBackupService();

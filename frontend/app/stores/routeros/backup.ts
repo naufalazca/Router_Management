@@ -33,6 +33,8 @@ export const useBackupStore = defineStore('routeros-backup', () => {
   // Filters
   const filters = ref<BackupFilters>({
     routerId: undefined,
+    switchId: undefined,
+    deviceId: undefined,
     companyId: undefined,
     status: null,
     isPinned: null,
@@ -62,8 +64,16 @@ export const useBackupStore = defineStore('routeros-backup', () => {
     let result = [...backups.value]
 
     // Apply filters
-    if (filters.value.routerId) {
-      result = result.filter(b => b.routerId === filters.value.routerId)
+    if (filters.value.deviceId) {
+      result = result.filter(b => b.routerId === filters.value.deviceId || b.switchId === filters.value.deviceId)
+    }
+    else {
+      if (filters.value.routerId) {
+        result = result.filter(b => b.routerId === filters.value.routerId)
+      }
+      if (filters.value.switchId) {
+        result = result.filter(b => b.switchId === filters.value.switchId)
+      }
     }
 
     if (filters.value.status) {
@@ -79,6 +89,8 @@ export const useBackupStore = defineStore('routeros-backup', () => {
       result = result.filter(b =>
         b.router?.name.toLowerCase().includes(query)
         || b.router?.ipAddress.includes(query)
+        || b.switch?.name.toLowerCase().includes(query)
+        || b.switch?.ipAddress.includes(query)
         || b.checksum.toLowerCase().includes(query),
       )
     }
@@ -99,8 +111,14 @@ export const useBackupStore = defineStore('routeros-backup', () => {
       const { $apiFetch } = useApiFetch()
       const params = new URLSearchParams()
 
-      if (query?.routerId)
-        params.append('routerId', query.routerId)
+      if (query?.deviceId)
+        params.append('deviceId', query.deviceId)
+      else {
+        if (query?.routerId)
+          params.append('routerId', query.routerId)
+        if (query?.switchId)
+          params.append('switchId', query.switchId)
+      }
       if (query?.companyId)
         params.append('companyId', query.companyId)
       if (query?.status)
@@ -367,6 +385,8 @@ export const useBackupStore = defineStore('routeros-backup', () => {
   function resetFilters() {
     filters.value = {
       routerId: undefined,
+      switchId: undefined,
+      deviceId: undefined,
       companyId: undefined,
       status: null,
       isPinned: null,

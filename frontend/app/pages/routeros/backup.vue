@@ -9,11 +9,11 @@ import RouterosBackupRestoreDialog from '~/components/routeros/backup/RouterosBa
 import RouterosBackupStats from '~/components/routeros/backup/RouterosBackupStats.vue'
 import RouterosBackupTable from '~/components/routeros/backup/RouterosBackupTable.vue'
 import RouterosBackupViewModal from '~/components/routeros/backup/RouterosBackupViewModal.vue'
-import { useRouterStore } from '~/stores/router'
+import { useRouterosDevices } from '~/composables/useRouterosDevices'
 import { useBackupStore } from '~/stores/routeros/backup'
 
 const backupStore = useBackupStore()
-const routerStore = useRouterStore()
+const { devices, fetchDevices } = useRouterosDevices()
 const searchQuery = ref('')
 
 // Modal states
@@ -27,7 +27,7 @@ const selectedBackup = ref<RouterBackup | null>(null)
 onMounted(async () => {
   await Promise.all([
     backupStore.fetchBackups({ limit: 50, offset: 0 }),
-    routerStore.fetchRouters(),
+    fetchDevices(),
   ])
 })
 
@@ -47,9 +47,9 @@ function handlePinnedFilter(isPinned: boolean | null) {
   backupStore.setFilters({ isPinned })
 }
 
-// Filter by router
-function handleRouterFilter(routerId: string | undefined) {
-  backupStore.setFilters({ routerId })
+// Filter by device (router or switch)
+function handleRouterFilter(deviceId: string | undefined) {
+  backupStore.setFilters({ deviceId })
 }
 
 // Open generate modal
@@ -148,7 +148,7 @@ async function handleRefresh() {
     <RouterosBackupTable
       :backups="backupStore.filteredBackups"
       :is-loading="backupStore.loading"
-      :routers="routerStore.routers"
+      :routers="devices"
       @view="openViewModal"
       @download="handleDownload"
       @restore="openRestoreDialog"
@@ -162,7 +162,7 @@ async function handleRefresh() {
     <!-- Modals & Dialogs -->
     <RouterosBackupGenerateModal
       v-model:open="isGenerateModalOpen"
-      :routers="routerStore.routers"
+      :devices="devices"
       @success="handleGenerateSuccess"
     />
 
@@ -176,7 +176,7 @@ async function handleRefresh() {
       v-if="selectedBackup"
       v-model:open="isRestoreDialogOpen"
       :backup="selectedBackup"
-      :routers="routerStore.routers"
+      :devices="devices"
       @success="handleRestoreSuccess"
     />
 

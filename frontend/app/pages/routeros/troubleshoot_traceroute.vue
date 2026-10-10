@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { TracerouteRequest } from '~/stores/routeros/troubleshoot'
+import type { RouterosDevice } from '~/composables/useRouterosDevices'
 import {
   AlertCircle,
   GitBranch,
   Globe,
+  Network,
   Play,
   RefreshCw,
   Search,
@@ -34,24 +36,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useRouterStore } from '~/stores/router'
+import { useRouterosDevices } from '~/composables/useRouterosDevices'
 import { useRouterOSTroubleshootStore } from '~/stores/routeros/troubleshoot'
 
 const troubleshootStore = useRouterOSTroubleshootStore()
-const routerStore = useRouterStore()
+const { devices, findDevice, fetchDevices } = useRouterosDevices()
 
 const selectedRouterId = ref<string>('')
 const targetAddress = ref<string>('1.1.1.1')
 const probeCount = ref<number>(10)
 
-// Load routers on mount
+// Load devices (routers + switches) on mount; query RouterOS only after the user picks a device
 onMounted(async () => {
-  await routerStore.fetchRouters()
-
-  // Auto-select first router if available
-  if (routerStore.routers.length > 0) {
-    selectedRouterId.value = routerStore.routers[0]?.id || ''
-  }
+  await fetchDevices()
 })
 
 // Watch for errors from store and show toast
@@ -61,22 +58,15 @@ watch(() => troubleshootStore.error, (newError) => {
   }
 })
 
-// Watch for router store errors
-watch(() => routerStore.error, (newError) => {
-  if (newError) {
-    toast.error(`Router error: ${newError}`)
-  }
-})
-
-// Get selected router info
-const selectedRouter = computed(() => {
-  return routerStore.routers.find(r => r.id === selectedRouterId.value)
+// Get selected device info
+const selectedRouter = computed<RouterosDevice | undefined>(() => {
+  return findDevice(selectedRouterId.value)
 })
 
 // Execute traceroute
 async function executeTraceroute() {
   if (!selectedRouterId.value) {
-    toast.error('Please select a router')
+    toast.error('Please select a device')
     return
   }
 
@@ -160,20 +150,20 @@ const destinationReached = computed(() => {
           </h1>
         </div>
         <p class="text-sm text-muted-foreground">
-          {{ selectedRouter ? `Trace network path from ${selectedRouter.name}` : 'Select a router to trace network path' }}
+          {{ selectedRouter ? `Trace network path from ${selectedRouter.name}` : 'Select a device to trace network path' }}
         </p>
       </div>
     </div>
 
-    <!-- Router Selection -->
+    <!-- Device Selection -->
     <Card>
       <CardHeader>
         <CardTitle class="flex items-center gap-2">
           <Server class="h-5 w-5" />
-          Router Selection
+          Device Selection
         </CardTitle>
         <CardDescription>
-          Select the router to execute traceroute from
+          Select the router or switch to execute traceroute from
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -181,19 +171,21 @@ const destinationReached = computed(() => {
           <div class="flex-1">
             <Select v-model="selectedRouterId">
               <SelectTrigger>
-                <SelectValue placeholder="Select a router..." />
+                <SelectValue placeholder="Select a device..." />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   <SelectItem
-                    v-for="router in routerStore.routers"
-                    :key="router.id"
-                    :value="router.id"
+                    v-for="device in devices"
+                    :key="device.id"
+                    :value="device.id"
                   >
                     <div class="flex items-center gap-2">
-                      <Server class="h-4 w-4" />
-                      <span>{{ router.name }}</span>
-                      <span class="text-xs text-muted-foreground">{{ router.ipAddress }}</span>
+                      <Network v-if="device.deviceType === 'switch'" class="h-4 w-4" />
+                      <Server v-else class="h-4 w-4" />
+                      <span>{{ device.name }}</span>
+                      <span class="text-xs text-muted-foreground">{{ device.ipAddress }}</span>
+                      <span class="text-xs text-muted-foreground uppercase">({{ device.deviceType }})</span>
                     </div>
                   </SelectItem>
                 </SelectGroup>

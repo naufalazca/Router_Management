@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express';
-import * as userController from '../../controllers/routeros/routeros.user.controller';
+import * as userController from '../../controllers/routeros/routeros.global.user.controller';
 import { authenticate, requireAdmin } from '../../middleware/auth';
 
 const router = Router();

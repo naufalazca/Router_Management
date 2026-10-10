@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Router } from '~/stores/router'
+import type { RouterosDevice } from '~/composables/useRouterosDevices'
 import type { BackupStatus, RouterBackup } from '~/types/backup'
 import {
   AlertCircle,
@@ -36,7 +36,7 @@ import {
 defineProps<{
   backups: RouterBackup[]
   isLoading: boolean
-  routers: Router[]
+  routers: RouterosDevice[]
 }>()
 
 const emit = defineEmits<{
@@ -113,7 +113,7 @@ function getTriggerBadge(triggerType: string) {
     <CardHeader>
       <CardTitle>Backup History</CardTitle>
       <CardDescription>
-        View and manage router configuration backups
+        View and manage device configuration backups
       </CardDescription>
     </CardHeader>
     <CardContent>
@@ -132,7 +132,7 @@ function getTriggerBadge(triggerType: string) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Router</TableHead>
+              <TableHead>Device</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
               <TableHead>Size</TableHead>
@@ -149,16 +149,16 @@ function getTriggerBadge(triggerType: string) {
               :key="backup.id"
               class="group"
             >
-              <!-- Router -->
+              <!-- Device -->
               <TableCell>
                 <div class="flex items-start gap-2">
                   <Pin v-if="backup.isPinned" class="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                   <div class="min-w-0">
                     <div class="font-medium truncate">
-                      {{ backup.router?.name || 'Unknown' }}
+                      {{ backup.router?.name || backup.switch?.name || 'Unknown' }}
                     </div>
                     <div class="text-sm text-muted-foreground truncate">
-                      {{ backup.router?.ipAddress || 'N/A' }}
+                      {{ backup.router?.ipAddress || backup.switch?.ipAddress || 'N/A' }}
                     </div>
                   </div>
                 </div>

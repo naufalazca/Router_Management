@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Router } from '~/stores/router'
+import type { RouterosDevice } from '~/composables/useRouterosDevices'
 import { computed, ref } from 'vue'
 import { Button } from '~/components/ui/button'
 import { Checkbox } from '~/components/ui/checkbox'
@@ -24,7 +24,7 @@ import { BackupType } from '~/types/backup'
 
 const props = defineProps<{
   open: boolean
-  routers: Router[]
+  devices: RouterosDevice[]
 }>()
 
 const emit = defineEmits<{
@@ -35,24 +35,24 @@ const emit = defineEmits<{
 const backupStore = useBackupStore()
 
 // Form state
-const selectedRouterId = ref<string>('')
+const selectedDeviceId = ref<string>('')
 const compact = ref(false)
 const backupType = ref<BackupType>(BackupType.EXPORT)
 const isSubmitting = ref(false)
 
-// Active routers only
-const activeRouters = computed(() => {
-  return props.routers.filter(r => r.status === 'ACTIVE')
+// Active devices only
+const activeDevices = computed(() => {
+  return props.devices.filter(d => d.status === 'ACTIVE')
 })
 
-// Selected router info
-const selectedRouter = computed(() => {
-  return activeRouters.value.find(r => r.id === selectedRouterId.value)
+// Selected device info
+const selectedDevice = computed(() => {
+  return activeDevices.value.find(d => d.id === selectedDeviceId.value)
 })
 
 // Handle submit
 async function handleSubmit() {
-  if (!selectedRouterId.value) {
+  if (!selectedDeviceId.value) {
     return
   }
 
@@ -60,7 +60,7 @@ async function handleSubmit() {
 
   try {
     await backupStore.triggerBackup({
-      routerId: selectedRouterId.value,
+      routerId: selectedDeviceId.value,
       compact: compact.value,
       backupType: backupType.value,
     })
@@ -78,7 +78,7 @@ async function handleSubmit() {
 
 // Reset form
 function resetForm() {
-  selectedRouterId.value = ''
+  selectedDeviceId.value = ''
   compact.value = false
   backupType.value = BackupType.EXPORT
 }
@@ -98,52 +98,53 @@ function handleOpenChange(value: boolean) {
       <DialogHeader>
         <DialogTitle>Generate Backup</DialogTitle>
         <DialogDescription>
-          Create a new backup for a router. The configuration will be exported and stored securely.
+          Create a new backup for a router or switch. The configuration will be exported and stored securely.
         </DialogDescription>
       </DialogHeader>
 
       <div class="space-y-4 py-4">
-        <!-- Router Selection -->
+        <!-- Device Selection -->
         <div class="space-y-2">
-          <Label for="router">Select Router *</Label>
-          <Select v-model="selectedRouterId">
+          <Label for="router">Select Device *</Label>
+          <Select v-model="selectedDeviceId">
             <SelectTrigger id="router">
-              <SelectValue placeholder="Choose a router" />
+              <SelectValue placeholder="Choose a device" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem
-                v-for="router in activeRouters"
-                :key="router.id"
-                :value="router.id"
+                v-for="device in activeDevices"
+                :key="device.id"
+                :value="device.id"
               >
                 <div class="flex items-center gap-2">
-                  <span class="font-medium">{{ router.name }}</span>
-                  <span class="text-sm text-muted-foreground">{{ router.ipAddress }}</span>
+                  <span class="font-medium">{{ device.name }}</span>
+                  <span class="text-sm text-muted-foreground">{{ device.ipAddress }}</span>
+                  <span class="text-xs text-muted-foreground uppercase">({{ device.deviceType }})</span>
                 </div>
               </SelectItem>
             </SelectContent>
           </Select>
-          <p v-if="activeRouters.length === 0" class="text-sm text-muted-foreground">
-            No active routers available
+          <p v-if="activeDevices.length === 0" class="text-sm text-muted-foreground">
+            No active devices available
           </p>
         </div>
 
-        <!-- Selected Router Info -->
+        <!-- Selected Device Info -->
         <div
-          v-if="selectedRouter"
+          v-if="selectedDevice"
           class="rounded-lg border bg-muted/50 p-3 space-y-1"
         >
           <div class="flex items-center justify-between text-sm">
             <span class="text-muted-foreground">Model:</span>
-            <span class="font-medium">{{ selectedRouter.model || 'N/A' }}</span>
+            <span class="font-medium">{{ selectedDevice.model || 'N/A' }}</span>
           </div>
           <div class="flex items-center justify-between text-sm">
             <span class="text-muted-foreground">Location:</span>
-            <span class="font-medium">{{ selectedRouter.location || 'N/A' }}</span>
+            <span class="font-medium">{{ selectedDevice.location || 'N/A' }}</span>
           </div>
           <div class="flex items-center justify-between text-sm">
             <span class="text-muted-foreground">Status:</span>
-            <span class="font-medium capitalize">{{ selectedRouter.status }}</span>
+            <span class="font-medium capitalize">{{ selectedDevice.status }}</span>
           </div>
         </div>
 
@@ -211,7 +212,7 @@ function handleOpenChange(value: boolean) {
           Cancel
         </Button>
         <Button
-          :disabled="!selectedRouterId || isSubmitting || activeRouters.length === 0"
+          :disabled="!selectedDeviceId || isSubmitting || activeDevices.length === 0"
           @click="handleSubmit"
         >
           <span v-if="isSubmitting">Creating Backup...</span>

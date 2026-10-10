@@ -4,7 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { routerOSTroubleshootService } from '../../services/routeros/routeros.troubleshoot.service';
+import { routerOSGlobalTroubleshootService } from '../../services/routeros/routeros.global.troubleshoot.service';
 import {
   routerIdParamSchema,
   pingRequestSchema,
@@ -21,7 +21,7 @@ export async function ping(req: Request, res: Response, next: NextFunction) {
     const { routerId } = routerIdParamSchema.parse(req.params);
     const pingParams = pingRequestSchema.parse(req.body);
 
-    const result = await routerOSTroubleshootService.ping(routerId, pingParams);
+    const result = await routerOSGlobalTroubleshootService.ping(routerId, pingParams);
 
     res.json({
       status: 'success',
@@ -41,7 +41,7 @@ export async function traceroute(req: Request, res: Response, next: NextFunction
     const { routerId } = routerIdParamSchema.parse(req.params);
     const tracerouteParams = tracerouteRequestSchema.parse(req.body);
 
-    const result = await routerOSTroubleshootService.traceroute(routerId, tracerouteParams);
+    const result = await routerOSGlobalTroubleshootService.traceroute(routerId, tracerouteParams);
 
     res.json({
       status: 'success',
@@ -61,7 +61,7 @@ export async function continuousPing(req: Request, res: Response, next: NextFunc
     const { routerId } = routerIdParamSchema.parse(req.params);
     const { iterations = 1, ...pingParams } = continuousPingRequestSchema.parse(req.body);
 
-    const result = await routerOSTroubleshootService.continuousPing(routerId, pingParams, iterations);
+    const result = await routerOSGlobalTroubleshootService.continuousPing(routerId, pingParams, iterations);
 
     res.json({
       status: 'success',

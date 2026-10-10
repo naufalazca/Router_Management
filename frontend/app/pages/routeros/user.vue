@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { RouterOSUser } from '~/stores/routeros/user'
+import type { RouterosDevice } from '~/composables/useRouterosDevices'
 import {
   AlertCircle,
   CheckCircle2,
   Eye,
+  Network,
   Pencil,
   Plus,
   Power,
@@ -43,11 +45,11 @@ import RouterosDeleteDialog from '~/components/routeros/user/RouterosDeleteDialo
 import RouterosUserCreateModal from '~/components/routeros/user/RouterosUserCreateModal.vue'
 import RouterosUserEditModal from '~/components/routeros/user/RouterosUserEditModal.vue'
 import RouterosUserViewModal from '~/components/routeros/user/RouterosUserViewModal.vue'
-import { useRouterStore } from '~/stores/router'
+import { useRouterosDevices } from '~/composables/useRouterosDevices'
 import { useRouterOSUserStore } from '~/stores/routeros/user'
 
 const routerosUserStore = useRouterOSUserStore()
-const routerStore = useRouterStore()
+const { devices, findDevice, fetchDevices } = useRouterosDevices()
 const searchQuery = ref('')
 const selectedRouterId = ref<string>('')
 
@@ -58,14 +60,9 @@ const isViewModalOpen = ref(false)
 const isDeleteDialogOpen = ref(false)
 const selectedUser = ref<RouterOSUser | null>(null)
 
-// Load routers on mount
+// Load devices (routers + switches) on mount; query RouterOS only after the user picks a device
 onMounted(async () => {
-  await routerStore.fetchRouters()
-
-  // Auto-select first router if available
-  if (routerStore.routers.length > 0) {
-    selectedRouterId.value = routerStore.routers[0]?.id || ''
-  }
+  await fetchDevices()
 })
 
 // Watch for router selection changes
@@ -85,16 +82,16 @@ watch(() => routerosUserStore.error, (newError) => {
   }
 })
 
-// Watch for router store errors
-watch(() => routerStore.error, (newError) => {
+// Watch for device store errors
+watch(() => routerosUserStore.error, (newError) => {
   if (newError) {
-    toast.error(`Router error: ${newError}`)
+    toast.error(newError)
   }
 })
 
-// Get selected router info
-const selectedRouter = computed(() => {
-  return routerStore.routers.find(r => r.id === selectedRouterId.value)
+// Get selected device info
+const selectedRouter = computed<RouterosDevice | undefined>(() => {
+  return findDevice(selectedRouterId.value)
 })
 
 // Filtered users based on search
@@ -234,30 +231,30 @@ const stats = computed(() => ({
       </AlertDescription>
     </Alert>
 
-    <!-- Error Alert for Router Selection -->
+    <!-- Error Alert for Device Selection -->
     <Alert
-      v-if="routerStore.error && !routerosUserStore.error"
+      v-if="routerosUserStore.error"
       variant="destructive"
       class="relative"
     >
       <AlertCircle class="h-4 w-4" />
       <AlertTitle class="flex items-center justify-between">
-        <span>Router List Error</span>
+        <span>Device List Error</span>
         <button
           type="button"
           class="text-sm underline opacity-80 hover:opacity-100"
-          @click="routerStore.clearError"
+          @click="fetchDevices()"
         >
           Dismiss
         </button>
       </AlertTitle>
       <AlertDescription class="mt-2">
-        {{ routerStore.error }}
+        {{ routerosUserStore.error }}
         <div class="mt-3 flex gap-2">
           <button
             type="button"
             class="inline-flex items-center rounded-md bg-background px-3 py-1.5 text-sm font-medium hover:bg-background/80"
-            @click="routerStore.fetchRouters()"
+            @click="fetchDevices()"
           >
             Retry
           </button>
@@ -277,7 +274,7 @@ const stats = computed(() => ({
           </h1>
         </div>
         <p class="text-sm text-muted-foreground">
-          {{ selectedRouter ? `Managing users on ${selectedRouter.name}` : 'Select a router to manage users' }}
+          {{ selectedRouter ? `Managing users on ${selectedRouter.name}` : 'Select a device to manage users' }}
         </p>
       </div>
 
@@ -298,15 +295,15 @@ const stats = computed(() => ({
       </div>
     </div>
 
-    <!-- Router Selection -->
+    <!-- Device Selection -->
     <Card>
       <CardHeader>
         <CardTitle class="flex items-center gap-2">
           <Server class="h-5 w-5" />
-          Router Selection
+          Device Selection
         </CardTitle>
         <CardDescription>
-          Select a router to view and manage its users
+          Select a router or switch to view and manage its users
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -314,19 +311,21 @@ const stats = computed(() => ({
           <div class="flex-1">
             <Select v-model="selectedRouterId">
               <SelectTrigger>
-                <SelectValue placeholder="Select a router..." />
+                <SelectValue placeholder="Select a device..." />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   <SelectItem
-                    v-for="router in routerStore.routers"
-                    :key="router.id"
-                    :value="router.id"
+                    v-for="device in devices"
+                    :key="device.id"
+                    :value="device.id"
                   >
                     <div class="flex items-center gap-2">
-                      <Server class="h-4 w-4" />
-                      <span>{{ router.name }}</span>
-                      <span class="text-xs text-muted-foreground">{{ router.ipAddress }}</span>
+                      <Network v-if="device.deviceType === 'switch'" class="h-4 w-4" />
+                      <Server v-else class="h-4 w-4" />
+                      <span>{{ device.name }}</span>
+                      <span class="text-xs text-muted-foreground">{{ device.ipAddress }}</span>
+                      <span class="text-xs text-muted-foreground uppercase">({{ device.deviceType }})</span>
                     </div>
                   </SelectItem>
                 </SelectGroup>

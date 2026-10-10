@@ -4,7 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { routerOSUserService } from '../../services/routeros/routeros.user.service';
+import { routerOSGlobalUserService } from '../../services/routeros/routeros.global.user.service';
 import {
   routerIdParamSchema,
   routerUserIdParamsSchema,
@@ -20,7 +20,7 @@ export async function getUsers(req: Request, res: Response, next: NextFunction) 
   try {
     const { routerId } = routerIdParamSchema.parse(req.params);
 
-    const users = await routerOSUserService.getUsers(routerId);
+    const users = await routerOSGlobalUserService.getUsers(routerId);
 
     res.json({
       status: 'success',
@@ -48,7 +48,7 @@ export async function getUserByName(req: Request, res: Response, next: NextFunct
       return;
     }
 
-    const user = await routerOSUserService.getUserByName(routerId, username);
+    const user = await routerOSGlobalUserService.getUserByName(routerId, username);
 
     if (!user) {
       res.status(404).json({
@@ -76,7 +76,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
     const { routerId } = routerIdParamSchema.parse(req.params);
     const userData = createUserSchema.parse(req.body);
 
-    const user = await routerOSUserService.createUser(routerId, userData);
+    const user = await routerOSGlobalUserService.createUser(routerId, userData);
 
     res.status(201).json({
       status: 'success',
@@ -97,7 +97,7 @@ export async function updateUser(req: Request, res: Response, next: NextFunction
     const { routerId, userId } = routerUserIdParamsSchema.parse(req.params);
     const userData = updateUserSchema.parse(req.body);
 
-    const user = await routerOSUserService.updateUser(routerId, userId, userData);
+    const user = await routerOSGlobalUserService.updateUser(routerId, userId, userData);
 
     res.json({
       status: 'success',
@@ -117,7 +117,7 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
   try {
     const { routerId, userId } = routerUserIdParamsSchema.parse(req.params);
 
-    await routerOSUserService.deleteUser(routerId, userId);
+    await routerOSGlobalUserService.deleteUser(routerId, userId);
 
     res.json({
       status: 'success',
@@ -136,7 +136,7 @@ export async function enableUser(req: Request, res: Response, next: NextFunction
   try {
     const { routerId, userId } = routerUserIdParamsSchema.parse(req.params);
 
-    const user = await routerOSUserService.enableUser(routerId, userId);
+    const user = await routerOSGlobalUserService.enableUser(routerId, userId);
 
     res.json({
       status: 'success',
@@ -156,7 +156,7 @@ export async function disableUser(req: Request, res: Response, next: NextFunctio
   try {
     const { routerId, userId } = routerUserIdParamsSchema.parse(req.params);
 
-    const user = await routerOSUserService.disableUser(routerId, userId);
+    const user = await routerOSGlobalUserService.disableUser(routerId, userId);
 
     res.json({
       status: 'success',

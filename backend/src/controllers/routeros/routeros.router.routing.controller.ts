@@ -4,7 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { routerOSRoutingService } from '../../services/routeros/routeros.routing.service';
+import { routerOSRoutingService } from '../../services/routeros/routeros.router.routing.service';
 
 /**
  * Get all BGP connections from a router

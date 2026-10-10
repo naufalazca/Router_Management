@@ -14,7 +14,8 @@ export const config = {
     origin: process.env.CORS_ORIGIN || 'http://localhost:5173'
   },
   rateLimit: {
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
+    windowMinutes: parseInt(process.env.RATE_LIMIT_WINDOW_MINUTES || '15', 10),
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MINUTES || '15', 10) * 60 * 1000,
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10)
   },
   jwt: {

@@ -4,6 +4,7 @@
  */
 
 import { Client, ClientChannel } from 'ssh2';
+import { describeRouterosError } from './client';
 
 export interface SSHConfig {
   host: string;
@@ -39,7 +40,7 @@ export class RouterOSSSHClient {
         })
         .on('error', (err: Error) => {
           console.error(`[SSH] Connection error:`, err);
-          reject(err);
+          reject(new Error(`Failed to connect to RouterOS via SSH at ${this.config.host}:${this.config.port} - ${describeRouterosError(err)}`));
         })
         .connect({
           host: this.config.host,

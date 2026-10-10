@@ -7,6 +7,38 @@ import { RouterOSAPI } from 'node-routeros';
 import type { RouterOSConfig, RouterOSCommandResult } from './types';
 import { DEFAULT_TIMEOUT, ROUTEROS_DEFAULT_PORT, RETRY_CONFIG } from './constants';
 
+/**
+ * Extract a human-readable reason from a connection error.
+ * node-routeros wraps low-level socket errors that often carry the
+ * reason in `code` (ECONNREFUSED, ETIMEDOUT, EHOSTUNREACH, ...) or in
+ * a nested `error` property, so plain `error.message` can be empty.
+ */
+export function describeRouterosError(error: unknown): string {
+  if (error && typeof error === 'object') {
+    const err = error as Record<string, unknown>;
+
+    const parts: string[] = [];
+    if (typeof err.code === 'string' && err.code) {
+      parts.push(err.code);
+    }
+    if (typeof err.message === 'string' && err.message.trim()) {
+      parts.push(err.message.trim());
+    } else if (err.error && typeof err.error === 'object') {
+      parts.push(describeRouterosError(err.error));
+    }
+
+    if (parts.length > 0) {
+      return parts.join(' - ');
+    }
+  }
+
+  if (typeof error === 'string' && error.trim()) {
+    return error.trim();
+  }
+
+  return 'Unknown connection error (device unreachable, port closed, or connection timed out)';
+}
+
 export class RouterOSClient {
   private api: RouterOSAPI;
   private config: RouterOSConfig;
@@ -43,8 +75,7 @@ export class RouterOSClient {
     } catch (error) {
       this.connected = false;
       console.error('RouterOS connection error:', error);
-      const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
-      throw new Error(`Failed to connect to RouterOS at ${this.config.host}:${this.config.port} - ${errorMsg}`);
+      throw new Error(`Failed to connect to RouterOS at ${this.config.host}:${this.config.port} - ${describeRouterosError(error)}`);
     }
   }
 

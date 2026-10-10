@@ -46,6 +46,17 @@ export const errorHandler = (
     });
   }
 
+  // Known operational errors (device lookup failures, connection failures, etc.)
+  // carry a meaningful, user-safe message — forward them as 502 instead of
+  // swallowing them behind a generic 500.
+  if (err.message && !isGenericSystemError(err)) {
+    console.error('Operational error:', err.message);
+    return res.status(502).json({
+      status: 'error',
+      message: err.message
+    });
+  }
+
   // Default Error
   console.error('Error:', err);
 
@@ -54,3 +65,14 @@ export const errorHandler = (
     message: 'Internal server error'
   });
 };
+
+/**
+ * Detect low-level programming/system errors whose raw message should not be
+ * exposed to clients (TypeError, ReferenceError, etc.).
+ */
+function isGenericSystemError(err: Error): boolean {
+  return err instanceof TypeError
+    || err instanceof ReferenceError
+    || err instanceof RangeError
+    || err instanceof SyntaxError;
+}

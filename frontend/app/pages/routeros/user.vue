@@ -62,7 +62,12 @@ const selectedUser = ref<RouterOSUser | null>(null)
 
 // Load devices (routers + switches) on mount; query RouterOS only after the user picks a device
 onMounted(async () => {
-  await fetchDevices()
+  try {
+    await fetchDevices()
+  }
+  catch {
+    deviceListError.value = 'Failed to load router and switch list'
+  }
 })
 
 // Watch for router selection changes
@@ -75,19 +80,15 @@ watch(selectedRouterId, async (newRouterId) => {
   }
 })
 
-// Watch for errors from store and show toast
+// Watch for query errors from the RouterOS user store and show toast
 watch(() => routerosUserStore.error, (newError) => {
   if (newError) {
     toast.error(newError)
   }
 })
 
-// Watch for device store errors
-watch(() => routerosUserStore.error, (newError) => {
-  if (newError) {
-    toast.error(newError)
-  }
-})
+// Track device list load failures separately from query errors
+const deviceListError = ref<string | null>(null)
 
 // Get selected device info
 const selectedRouter = computed<RouterosDevice | undefined>(() => {
@@ -231,9 +232,9 @@ const stats = computed(() => ({
       </AlertDescription>
     </Alert>
 
-    <!-- Error Alert for Device Selection -->
+    <!-- Error Alert for Device List Loading -->
     <Alert
-      v-if="routerosUserStore.error"
+      v-if="deviceListError"
       variant="destructive"
       class="relative"
     >
@@ -243,18 +244,18 @@ const stats = computed(() => ({
         <button
           type="button"
           class="text-sm underline opacity-80 hover:opacity-100"
-          @click="fetchDevices()"
+          @click="deviceListError = null; fetchDevices().catch(() => deviceListError = 'Failed to load router and switch list')"
         >
           Dismiss
         </button>
       </AlertTitle>
       <AlertDescription class="mt-2">
-        {{ routerosUserStore.error }}
+        {{ deviceListError }}
         <div class="mt-3 flex gap-2">
           <button
             type="button"
             class="inline-flex items-center rounded-md bg-background px-3 py-1.5 text-sm font-medium hover:bg-background/80"
-            @click="fetchDevices()"
+            @click="deviceListError = null; fetchDevices().catch(() => deviceListError = 'Failed to load router and switch list')"
           >
             Retry
           </button>

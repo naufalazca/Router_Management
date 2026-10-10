@@ -26,6 +26,108 @@ const emit = defineEmits<{
 // Store
 const topologyStore = useTopologyStore()
 
+const { $apiFetch } = useApiFetch()
+
+// ==========================================
+// Manual switch management (add/remove)
+// ==========================================
+interface AvailableSwitch {
+  id: string
+  name: string
+  ipAddress: string
+  status: string
+  brand?: string
+  portCount?: number
+  company?: { id: string, name: string, code: string }
+}
+
+const isAddSwitchOpen = ref(false)
+const availableSwitches = ref<AvailableSwitch[]>([])
+const isLoadingAvailableSwitches = ref(false)
+const isAddingSwitch = ref(false)
+const isRemovingSwitch = ref(false)
+
+function ownerLabel(sw: AvailableSwitch): string | null {
+  if (!sw.company || !props.companyId || sw.company.id === props.companyId)
+    return null
+  return sw.company.name
+}
+
+async function loadAvailableSwitches() {
+  if (!props.companyId)
+    return
+  isLoadingAvailableSwitches.value = true
+  try {
+    const response = await $apiFetch<{ status: string, data: AvailableSwitch[] }>(
+      `/router/topology/switch-layout/available?companyId=${props.companyId}`,
+    )
+    availableSwitches.value = response.data || []
+  }
+  catch (err: any) {
+    toast.error(err?.data?.message || 'Failed to load available switches')
+    availableSwitches.value = []
+  }
+  finally {
+    isLoadingAvailableSwitches.value = false
+  }
+}
+
+function openAddSwitchModal() {
+  isAddSwitchOpen.value = true
+  loadAvailableSwitches()
+}
+
+async function handleAddSwitch(sw: AvailableSwitch) {
+  if (!props.companyId)
+    return
+  isAddingSwitch.value = true
+  try {
+    await $apiFetch('/router/topology/switch-layout/add', {
+      method: 'POST',
+      body: {
+        switchId: sw.id,
+        companyId: props.companyId,
+      },
+    })
+    toast.success(`Switch "${sw.name}" added to topology`)
+    isAddSwitchOpen.value = false
+    emit('connectionCreated') // triggers parent refresh
+  }
+  catch (err: any) {
+    toast.error(err?.data?.message || 'Failed to add switch to topology')
+  }
+  finally {
+    isAddingSwitch.value = false
+  }
+}
+
+async function handleRemoveSwitchFromTopology() {
+  if (!props.companyId || !selectedNode.value || selectedNode.value.nodeType !== 'SWITCH')
+    return
+  const node = selectedNode.value
+  if (!confirm(`Remove switch "${node.name}" from the topology? Its connections will also be removed.`))
+    return
+  isRemovingSwitch.value = true
+  try {
+    await $apiFetch('/router/topology/switch-layout/remove', {
+      method: 'POST',
+      body: {
+        switchId: node.id,
+        companyId: props.companyId,
+      },
+    })
+    toast.success(`Switch "${node.name}" removed from topology`)
+    isNodeDetailOpen.value = false
+    emit('connectionCreated') // triggers parent refresh
+  }
+  catch (err: any) {
+    toast.error(err?.data?.message || 'Failed to remove switch from topology')
+  }
+  finally {
+    isRemovingSwitch.value = false
+  }
+}
+
 // VueFlow instance for getting node positions
 const { onNodeDragStop, onPaneReady, startConnection } = useVueFlow()
 
@@ -455,14 +557,14 @@ async function submitConnection() {
         linkStatus: newConnection.value.linkStatus,
         sourceInterface: newConnection.value.sourceInterface || undefined,
         targetInterface: newConnection.value.targetInterface || undefined,
-        sourcePortNumber: newConnection.value.sourcePortNumber,
-        targetPortNumber: newConnection.value.targetPortNumber,
-        vlan: newConnection.value.vlan,
+        sourcePortNumber: newConnection.value.sourcePortNumber || undefined,
+        targetPortNumber: newConnection.value.targetPortNumber || undefined,
+        vlan: newConnection.value.vlan || undefined,
         speed: newConnection.value.speed || undefined,
         bandwidth: newConnection.value.bandwidth || undefined,
         distance: newConnection.value.distance,
         notes: newConnection.value.notes,
-      })
+      }, props.companyId)
     }
     else {
       result = await topologyStore.createConnection({
@@ -514,7 +616,7 @@ function getNodeName(nodeId: string): string {
 async function handleDeleteEdge(edgeId: string) {
   const edge = props.edges.find(e => e.id === edgeId)
   if (edge?.edgeType === 'SWITCH') {
-    await topologyStore.deleteSwitchConnection(edgeId)
+    await topologyStore.deleteSwitchConnection(edgeId, props.companyId)
   }
   else {
     await topologyStore.deleteConnection(edgeId)
@@ -566,6 +668,20 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         <!-- Controls -->
         <Controls />
       </VueFlow>
+
+      <!-- Add Switch button overlay -->
+      <div class="absolute top-3 right-3 z-20">
+        <button
+          class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+          :disabled="!companyId"
+          @click="openAddSwitchModal"
+        >
+          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Add Switch
+        </button>
+      </div>
 
       <!-- Connecting hint overlay -->
       <div
@@ -1018,15 +1134,35 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         </div>
 
         <div class="mt-6 flex justify-between">
-          <button
-            class="inline-flex items-center gap-2 px-4 py-2 border border-input rounded-md hover:bg-accent hover:text-accent-foreground"
-            @click="startConnectFromNode"
-          >
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11-9 11z" />
-            </svg>
-            Create Connection
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              v-if="selectedNode.nodeType === 'SWITCH'"
+              class="inline-flex items-center gap-2 px-4 py-2 border border-destructive/50 text-destructive rounded-md hover:bg-destructive/10 disabled:opacity-50"
+              :disabled="isRemovingSwitch"
+              @click="handleRemoveSwitchFromTopology"
+            >
+              <svg
+                v-if="isRemovingSwitch"
+                class="h-4 w-4 animate-spin"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Remove from Topology
+            </button>
+            <button
+              class="inline-flex items-center gap-2 px-4 py-2 border border-input rounded-md hover:bg-accent hover:text-accent-foreground"
+              @click="startConnectFromNode"
+            >
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11-9 11z" />
+              </svg>
+              Create Connection
+            </button>
+          </div>
           <button
             class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
             @click="isNodeDetailOpen = false"
@@ -1045,6 +1181,81 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       @delete="handleDeleteEdge"
       @updated="emit('connectionCreated')"
     />
+
+    <!-- Add Switch Modal -->
+    <div
+      v-if="isAddSwitchOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      @click.self="isAddSwitchOpen = false"
+    >
+      <div class="bg-card rounded-lg shadow-lg max-w-md w-full mx-4 p-6 max-h-[80vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold">
+            Add Switch to Topology
+          </h3>
+          <button
+            class="text-muted-foreground hover:text-foreground"
+            @click="isAddSwitchOpen = false"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <p class="text-sm text-muted-foreground mb-4">
+          Select a switch to add to the topology. Switches are not added automatically.
+        </p>
+
+        <!-- Loading -->
+        <div
+          v-if="isLoadingAvailableSwitches"
+          class="flex items-center justify-center py-8"
+        >
+          <svg class="h-8 w-8 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        </div>
+
+        <!-- Available Switches -->
+        <div
+          v-else-if="availableSwitches.length > 0"
+          class="space-y-2"
+        >
+          <button
+            v-for="sw in availableSwitches"
+            :key="sw.id"
+            class="w-full flex items-center justify-between rounded-lg border border-border p-3 text-left transition-colors hover:border-primary hover:bg-accent/50 disabled:opacity-50"
+            :disabled="isAddingSwitch"
+            @click="handleAddSwitch(sw)"
+          >
+            <div>
+              <p class="font-medium">
+                {{ sw.name }}
+              </p>
+              <p class="text-xs text-muted-foreground">
+                {{ sw.ipAddress }}<template v-if="sw.brand">
+                  · {{ sw.brand }}
+                </template><template v-if="ownerLabel(sw)">
+                  · {{ ownerLabel(sw) }}
+                </template>
+              </p>
+            </div>
+            <svg class="h-5 w-5 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Empty -->
+        <div
+          v-else
+          class="text-center text-muted-foreground py-8"
+        >
+          <p>No switches available to add. Either every switch is already in your topology, or no switches exist yet.</p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 

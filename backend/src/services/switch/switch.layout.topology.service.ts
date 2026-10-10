@@ -45,13 +45,13 @@ export class SwitchLayoutService {
   }
 
   /**
-   * Get all switches of a company that are NOT yet added to the topology
-   * (no SwitchTopologyLayout record for the company).
+   * Get all switches NOT yet added to the given company's topology
+   * (no SwitchTopologyLayout record for the company). Any company's
+   * switch is addable — the layout is scoped per viewing company.
    */
   async getAvailableSwitches(companyId: string) {
     const [switches, layouts] = await Promise.all([
       prisma.switch.findMany({
-        where: { companyId },
         include: {
           company: { select: { id: true, name: true, code: true } }
         },
@@ -64,7 +64,14 @@ export class SwitchLayoutService {
     ]);
 
     const addedIds = new Set(layouts.map(l => l.switchId));
-    return switches.filter(s => !addedIds.has(s.id));
+    const available = switches.filter(s => !addedIds.has(s.id));
+    // Own switches first, then by name
+    return available.sort((a, b) => {
+      const aOwn = a.companyId === companyId ? 0 : 1;
+      const bOwn = b.companyId === companyId ? 0 : 1;
+      if (aOwn !== bOwn) return aOwn - bOwn;
+      return a.name.localeCompare(b.name);
+    });
   }
 
   /**
@@ -79,9 +86,8 @@ export class SwitchLayoutService {
       throw new Error('Switch not found');
     }
 
-    if (sw.companyId !== companyId) {
-      throw new Error('Switch does not belong to this company');
-    }
+    // Shared pool: any company may add any switch; the layout row is keyed
+    // by the viewing company, independent of the switch owner.
 
     // Refuse duplicates
     const existing = await prisma.switchTopologyLayout.findUnique({
@@ -120,10 +126,6 @@ export class SwitchLayoutService {
 
     if (!sw) {
       throw new Error('Switch not found');
-    }
-
-    if (sw.companyId !== companyId) {
-      throw new Error('Switch does not belong to this company');
     }
 
     // Layout must exist for this company — nothing to remove otherwise
@@ -214,7 +216,11 @@ export class SwitchLayoutService {
   }
 
   /**
-   * Upsert switch node position (create or update)
+   * Upsert switch node position. Update-only when a company context is given:
+   * switches are never auto-added to a topology by a position save — adding a
+   * switch (own or foreign) must go through addSwitchToTopology(). Only when
+   * no company context is provided (legacy/global fallback) may the row be
+   * created, keyed on the switch owner.
    */
   async upsertPosition(data: UpdateSwitchPositionData) {
     const { switchId, positionX, positionY, companyId } = data;
@@ -228,13 +234,20 @@ export class SwitchLayoutService {
       throw new Error('Switch not found');
     }
 
-    // Use the switch's companyId if not provided
     const effectiveCompanyId = companyId || sw.companyId || null;
 
-    // Ownership guard: a switch may only be positioned in a topology of the
-    // company that owns it (manual-add rule must not be bypassed by drag-save)
-    if (effectiveCompanyId && sw.companyId && sw.companyId !== effectiveCompanyId) {
-      throw new Error('Switch does not belong to this company');
+    const existing = await prisma.switchTopologyLayout.findUnique({
+      where: {
+        companyId_switchId: {
+          companyId: effectiveCompanyId as string,
+          switchId
+        }
+      }
+    });
+
+    if (!existing && companyId) {
+      // Not yet added to this company's topology: never auto-create on drag-save
+      return null;
     }
 
     return await prisma.switchTopologyLayout.upsert({
@@ -266,40 +279,42 @@ export class SwitchLayoutService {
   }
 
   /**
-   * Bulk upsert switch node positions (parallel; skips foreign-company switches)
+   * Bulk upsert switch node positions (parallel). Each row is keyed by the
+   * viewing company. Update-only: switches not already present in the
+   * company's layout are skipped — adding a switch to a topology is always a
+   * manual action (addSwitchToTopology), never a side effect of a drag-save.
    */
   async bulkUpsertPositions(data: BulkUpdatePositionsData) {
     const { positions, companyId } = data;
 
-    // Resolve company ownership for all switches in one query
+    // Which of these switches are already placed in this company's topology?
     const switchIds = positions.map(p => p.switchId);
-    const switches = await prisma.switch.findMany({
-      where: { id: { in: switchIds } },
-      select: { id: true, companyId: true }
+    const existingLayouts = await prisma.switchTopologyLayout.findMany({
+      where: {
+        switchId: { in: switchIds },
+        ...(companyId ? { companyId } : {})
+      },
+      select: { switchId: true }
     });
-    const companyIdBySwitch = new Map(switches.map(s => [s.id, s.companyId]));
+    const existingIds = new Set(existingLayouts.map(l => l.switchId));
 
     const results = await Promise.all(positions.map(async (pos) => {
       try {
-        const ownerCompanyId = companyIdBySwitch.get(pos.switchId);
-        if (!ownerCompanyId) {
-          console.warn(`Skipping position upsert for unknown switch ${pos.switchId}`);
+        if (!existingIds.has(pos.switchId)) {
+          // Not yet added to the (company's) topology: skip (no auto-add)
           return null;
         }
-        if (companyId && ownerCompanyId !== companyId) {
-          // Foreign switch: never create a layout for another company
-          return null;
-        }
+
         return await prisma.switchTopologyLayout.upsert({
           where: {
             companyId_switchId: {
-              companyId: ownerCompanyId as string,
+              companyId: (companyId || null) as string,
               switchId: pos.switchId
             }
           },
           create: {
             switchId: pos.switchId,
-            companyId: ownerCompanyId,
+            companyId: companyId || null,
             positionX: pos.positionX,
             positionY: pos.positionY
           },

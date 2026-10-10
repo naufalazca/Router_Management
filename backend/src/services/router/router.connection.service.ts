@@ -226,23 +226,15 @@ export class RouterConnectionService {
     let switchEdges: TopologyEdge[] = [];
 
     if (companyId) {
-      // Company-owned device IDs (routers + switches)
       // Only switches that were manually added to the topology (have a layout
-      // record for this company) appear as nodes.
-      const [companySwitches, companySwitchLayouts] = await Promise.all([
-        prisma.switch.findMany({
-          where: { companyId },
-          select: { id: true }
-        }),
-        prisma.switchTopologyLayout.findMany({
-          where: { companyId },
-          select: { switchId: true }
-        })
-      ]);
+      // record for this company) appear as nodes — including switches owned by
+      // another company (shared pool: layout rows are per viewing company).
+      const companySwitchLayouts = await prisma.switchTopologyLayout.findMany({
+        where: { companyId },
+        select: { switchId: true }
+      });
       const addedSwitchIds = new Set(companySwitchLayouts.map(l => l.switchId));
-      const visibleCompanySwitchIds = companySwitches
-        .map(s => s.id)
-        .filter(id => addedSwitchIds.has(id));
+      const visibleCompanySwitchIds = Array.from(addedSwitchIds);
 
       const deviceIds = new Set<string>([
         ...routers.map(r => r.id),

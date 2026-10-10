@@ -25,6 +25,17 @@ export const navMenu: NavMenu[] = [
         link: '/switch',
       },
       {
+        title: 'Switch Management',
+        icon: 'i-lucide-radio-tower',
+        children: [
+          {
+            title: 'VLAN',
+            icon: 'i-lucide-layers',
+            link: '/routeros/vlan',
+          },
+        ],
+      },
+      {
         title: 'Router Management',
         icon: 'i-lucide-radio',
         children: [

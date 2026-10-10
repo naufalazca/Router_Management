@@ -9,6 +9,7 @@ import routerosUserRoutes from './routeros/routeros.global.user.routes';
 import routerosBackupRoutes from './routeros/routeros.global.backup.routes';
 import routerosRoutingRoutes from './routeros/routeros.router.routing.routes';
 import routerosTroubleshootRoutes from './routeros/routeros.global.troubleshoot.routes';
+import routerosVlanRoutes from './routeros/routeros.global.vlan.routes';
 import kanbanRoutes from './kanban/kanban.routes';
 import ipinfoRoutes from './ipinfo.routes';
 
@@ -25,6 +26,7 @@ router.use('/routeros/users', routerosUserRoutes);
 router.use('/routeros/backup', routerosBackupRoutes);
 router.use('/routeros', routerosRoutingRoutes);
 router.use('/routeros/troubleshoot', routerosTroubleshootRoutes);
+router.use('/routeros/vlan', routerosVlanRoutes);
 router.use('/kanban', kanbanRoutes);
 router.use('/ipinfo', ipinfoRoutes);
 
